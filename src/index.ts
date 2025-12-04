@@ -14,7 +14,7 @@ program
       "tracking files, and startup commands needed for consistent agent sessions.\n\n" +
       "Learn more: https://github.com/danielgwilson/agent-harness"
   )
-  .version("0.1.0");
+  .version("0.2.0");
 
 program.addCommand(initCommand);
 

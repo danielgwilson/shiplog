@@ -62,21 +62,49 @@ npx agent-harness init --force
 your-project/
 ├── .claude/
 │   ├── commands/
-│   │   └── ramp.md              # /ramp command for session startup
+│   │   ├── ramp.md              # /ramp command — continue existing work
+│   │   └── plan.md              # /plan command — start new initiatives
 │   ├── session-start.md         # Detailed startup checklist
 │   └── settings.local.json      # Tool permissions template
 │
 ├── docs/
+│   ├── sprints/                 # Per-initiative feature tracking
 │   ├── PROGRESS.md              # Task tracking across sessions
 │   ├── DECISIONS.md             # Decision log with reasoning
 │   ├── HANDOFF.md               # Current session state
-│   ├── FEATURES.json            # Feature list with pass/fail
 │   └── CLAUDE_VOICE.md          # Agent persona template
 │
 └── CLAUDE.md                    # Project instructions
 ```
 
+With `--features` flag, also creates `docs/FEATURES.json` for global feature tracking.
+
 ## How It Works
+
+### Two Commands: /plan and /ramp
+
+| Command | Use When | What It Does |
+|---------|----------|--------------|
+| `/plan` | Starting a **new** initiative | Asks about goals, explores codebase, creates sprint file |
+| `/ramp` | **Continuing** existing work | Gets bearings, picks next task, works incrementally |
+
+**Example workflow:**
+
+```
+Day 1: /plan "Add referral system"
+  └── Creates docs/sprints/2024-12-04-referral-system.json
+  └── Adds tasks to PROGRESS.md
+  └── Starts working on first feature
+
+Day 2: /ramp
+  └── Reads PROGRESS.md, HANDOFF.md
+  └── Picks up where Day 1 left off
+  └── Continues working on sprint
+
+Day 5: (Sprint complete) /plan "Mobile redesign"
+  └── Creates new sprint file
+  └── New initiative begins
+```
 
 ### Session Workflow
 
@@ -84,10 +112,10 @@ your-project/
 ┌─────────────────────────────────────────────────────────────┐
 │                     SESSION START                            │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Run /ramp command                                        │
+│  1. Run /ramp (continue) or /plan (new initiative)           │
 │  2. Read PROGRESS.md, HANDOFF.md, DECISIONS.md              │
 │  3. Verify tests pass and dev server starts                  │
-│  4. Pick ONE task from PROGRESS.md                          │
+│  4. Pick ONE task from PROGRESS.md or sprint file            │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -98,6 +126,7 @@ your-project/
 │  • Commit frequently with descriptive messages               │
 │  • Update PROGRESS.md as items complete                      │
 │  • Log significant decisions in DECISIONS.md                 │
+│  • Mark sprint features as passing when tested               │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -118,7 +147,7 @@ your-project/
 | `PROGRESS.md` | Track what's done and what's next | After completing tasks |
 | `DECISIONS.md` | Log significant decisions with reasoning | When making non-obvious choices |
 | `HANDOFF.md` | Capture session state for next session | End of every session |
-| `FEATURES.json` | Feature list with pass/fail status | After testing features |
+| `docs/sprints/*.json` | Per-initiative feature tracking | Created via /plan, updated as features pass |
 | `CLAUDE.md` | Project-specific instructions | When project structure changes |
 
 ## CLI Reference
@@ -135,9 +164,9 @@ Options:
 
 Init Options:
   -n, --name <name>    Project name for CLAUDE.md header
-  -m, --minimal        Only essential files (PROGRESS, DECISIONS, HANDOFF, /ramp)
+  -m, --minimal        Only essential files (PROGRESS, DECISIONS, HANDOFF, /ramp, /plan)
   --no-voice           Skip CLAUDE_VOICE.md template
-  --no-features        Skip FEATURES.json template
+  --features           Include global FEATURES.json (use /plan for per-initiative instead)
   -f, --force          Overwrite existing files
   -h, --help           Display help for init command
 ```

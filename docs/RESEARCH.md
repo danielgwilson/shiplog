@@ -112,6 +112,89 @@ flowchart TD
 
 ---
 
+## Two Workflow Types: Build vs Evolve
+
+Anthropic's research focuses on **"Build X"** workflows — greenfield projects with a fixed spec. But many real-world projects follow **"Evolve X"** patterns with changing requirements.
+
+### Build X (Fixed Goal)
+
+**Use case:** Greenfield projects, MVPs, one-time builds
+**Example:** "Build a Claude.ai clone"
+
+```mermaid
+flowchart TD
+    SPEC[Fixed Specification] --> INIT[Initializer Agent]
+    INIT --> FEATURES[200 features in feature_list.json]
+    FEATURES --> |Session 1| CODE1[Coding Agent: features 1-5]
+    CODE1 --> |Session 2| CODE2[Coding Agent: features 6-10]
+    CODE2 --> |Session N| DONE[All features passing]
+```
+
+**Key characteristics:**
+- Feature list is created ONCE and never modified
+- Features can only be marked as passing (never removed/edited)
+- Work is "done" when all features pass
+- From Anthropic's actual code: *"IT IS CATASTROPHIC TO REMOVE OR EDIT FEATURES"*
+
+### Evolve X (Changing Goals)
+
+**Use case:** Ongoing products, iterative development, pivots
+**Example:** "Build feature A, then pivot to B, then fix bug C"
+
+```mermaid
+flowchart TD
+    subgraph "Initiative 1"
+        PLAN1[/plan: Referral System] --> SPRINT1[sprint: 2024-12-01-referrals.json]
+        SPRINT1 --> WORK1[Work through features]
+        WORK1 --> DONE1[Sprint complete]
+    end
+
+    subgraph "Initiative 2"
+        PLAN2[/plan: Mobile Redesign] --> SPRINT2[sprint: 2024-12-15-mobile.json]
+        SPRINT2 --> WORK2[Work through features]
+    end
+
+    DONE1 --> PLAN2
+```
+
+**Key characteristics:**
+- Each initiative gets its own sprint file
+- Sprint files follow Anthropic's immutable pattern (per initiative)
+- PROGRESS.md tracks day-to-day work across initiatives
+- New initiatives are planned via `/plan`, continued via `/ramp`
+
+### When to Use Which
+
+| Scenario | Workflow | Command |
+|----------|----------|---------|
+| New project from scratch | Build X | `agent-harness init --features` + `/ramp` |
+| Starting new initiative on existing project | Evolve X | `/plan` to create sprint |
+| Continuing existing work | Either | `/ramp` to pick up where you left off |
+| Adding features post-launch | Evolve X | `/plan` for each major initiative |
+
+### Per-Initiative Sprint Files
+
+Instead of one global FEATURES.json that goes stale, each initiative gets its own:
+
+```
+docs/
+├── sprints/
+│   ├── 2024-12-04-referral-system.json    # Current initiative
+│   ├── 2024-11-20-mvp-launch.json         # Completed (all passed)
+│   └── 2024-11-15-credits-system.json     # Completed
+├── PROGRESS.md                             # Day-to-day task tracking
+├── DECISIONS.md
+└── HANDOFF.md
+```
+
+**Benefits:**
+- Each initiative is self-contained and verifiable
+- Historical record: "What did we build when?"
+- PROGRESS.md stays clean (references sprint, not cluttered with old features)
+- Follows Anthropic's immutable feature list pattern, but per-sprint
+
+---
+
 ## Failure Modes & Solutions
 
 Based on Anthropic's research, here are common failure modes and their solutions:

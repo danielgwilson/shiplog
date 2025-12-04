@@ -10,7 +10,7 @@ interface InitOptions {
   name?: string;
   minimal: boolean;
   noVoice: boolean;
-  noFeatures: boolean;
+  features: boolean;
   force: boolean;
 }
 
@@ -34,7 +34,7 @@ export const initCommand = new Command("init")
     false
   )
   .option("--no-voice", "Skip CLAUDE_VOICE.md template")
-  .option("--no-features", "Skip FEATURES.json template")
+  .option("--features", "Include global FEATURES.json (use /plan for per-initiative)", false)
   .option("-f, --force", "Overwrite existing files", false)
   .action(async (options: InitOptions) => {
     const cwd = process.cwd();
@@ -43,7 +43,7 @@ export const initCommand = new Command("init")
     console.log(`\n🚀 Initializing agent harness for: ${projectName}\n`);
 
     // Create directories
-    const dirs = [".claude/commands", "docs"];
+    const dirs = [".claude/commands", "docs", "docs/sprints"];
     for (const dir of dirs) {
       const dirPath = path.join(cwd, dir);
       if (!fs.existsSync(dirPath)) {
@@ -57,6 +57,7 @@ export const initCommand = new Command("init")
       path: string;
       content: string;
       skipIf?: keyof InitOptions;
+      requireIf?: keyof InitOptions;
       minimalInclude?: boolean;
     }> = [
       // Always included
@@ -86,16 +87,21 @@ export const initCommand = new Command("init")
         minimalInclude: true,
       },
       {
+        path: ".claude/commands/plan.md",
+        content: getPLANmd(projectName),
+        minimalInclude: true,
+      },
+      {
         path: ".claude/session-start.md",
         content: getSESSIONSTARTmd(),
         minimalInclude: true,
       },
 
-      // Optional (full setup only)
+      // Optional (require explicit flag)
       {
         path: "docs/FEATURES.json",
         content: getFEATURESjson(),
-        skipIf: "noFeatures",
+        requireIf: "features",
       },
       {
         path: "docs/CLAUDE_VOICE.md",
@@ -120,6 +126,11 @@ export const initCommand = new Command("init")
 
       // Skip if flag says to skip
       if (file.skipIf && options[file.skipIf]) {
+        continue;
+      }
+
+      // Skip if requires a flag that wasn't provided
+      if (file.requireIf && !options[file.requireIf]) {
         continue;
       }
 
@@ -419,47 +430,124 @@ Future sessions can understand *why*, not just *what*.
 `;
 }
 
-function getRAMPmd(projectName: string): string {
-  return `You are resuming work on **${projectName}**.
+function getPLANmd(projectName: string): string {
+  return `You are starting a **new initiative** on **${projectName}**.
 
-## Quick Start
+## Step 1: Understand the Goal
 
-Run through this checklist to get oriented:
+Ask the user: **"What are we building? Describe the goal and I'll help plan it."**
 
-### 1. Orient (read these files)
-- \`docs/PROGRESS.md\` — What's done? What's next?
-- \`docs/HANDOFF.md\` — Current session state
-- \`docs/DECISIONS.md\` — Recent decisions and reasoning
+Wait for their response before proceeding.
 
-### 2. Verify (run these commands)
-\`\`\`bash
-# Check if tests pass
-npm test
+## Step 2: Gather Context
 
-# Check if dev server starts
-npm run dev
+Once you understand the goal:
+1. Read \`docs/PROGRESS.md\` — What's the current project state?
+2. Read \`docs/HANDOFF.md\` — Any recent context?
+3. Explore the codebase for relevant patterns
+4. Identify files/components that will be affected
+
+## Step 3: Clarify
+
+Ask clarifying questions about:
+- Scope — What's in/out for this initiative?
+- Approach — Are there multiple valid ways to do this?
+- Constraints — Timeline, dependencies, must-haves vs nice-to-haves?
+- Acceptance criteria — How do we know when it's done?
+
+## Step 4: Design the Sprint
+
+Create a sprint file at:
+\`\`\`
+docs/sprints/YYYY-MM-DD-<initiative-slug>.json
 \`\`\`
 
-### 3. Plan
-- Pick ONE task from PROGRESS.md
-- Check for blockers in HANDOFF.md
-- If blocked, ask human; otherwise proceed
+Format:
+\`\`\`json
+{
+  "initiative": "Initiative Name",
+  "created": "YYYY-MM-DD",
+  "status": "in_progress",
+  "features": [
+    {
+      "id": "feat-001",
+      "description": "User can do X",
+      "steps": ["Step 1", "Step 2", "Verify result"],
+      "passes": false
+    }
+  ]
+}
+\`\`\`
+
+**Important:** Once created, feature descriptions are IMMUTABLE. You can only update \`passes\` to \`true\`.
+
+## Step 5: Update PROGRESS.md
+
+Add the initiative to PROGRESS.md:
+\`\`\`markdown
+## In Progress
+
+### [Initiative Name] (sprint: YYYY-MM-DD-slug)
+- [ ] Feature 1
+- [ ] Feature 2
+\`\`\`
+
+## Step 6: Begin Work
+
+Use \`/ramp\` to continue working on the initiative, or start immediately:
+1. Pick the first feature from the sprint file
+2. Implement it
+3. Test it end-to-end
+4. Mark \`passes: true\` in the sprint file
+5. Commit with descriptive message
+6. Continue to next feature
+
+---
+
+**Key principle:** Break big goals into verifiable features. Each feature should be testable end-to-end.
+`;
+}
+
+function getRAMPmd(projectName: string): string {
+  return `You are **continuing** work on **${projectName}**.
+
+## Get Bearings (do this quickly)
+
+### 1. Read context files
+- \`docs/PROGRESS.md\` — What's done? What's next?
+- \`docs/HANDOFF.md\` — What was the last session working on?
+- \`docs/DECISIONS.md\` — Recent decisions and reasoning
+- Check \`docs/sprints/\` for any active sprint files
+
+### 2. Verify environment
+\`\`\`bash
+git status              # Any uncommitted changes?
+npm test                # Tests passing?
+npm run dev             # Dev server starts?
+\`\`\`
+
+### 3. Pick next task
+- Look at PROGRESS.md "In Progress" and "Next Up" sections
+- If a sprint file exists, pick next incomplete feature from it
+- Work on ONE item at a time
 
 ### 4. Execute
-- Work on ONE feature at a time
+- Implement incrementally
 - Commit frequently with descriptive messages
 - Update PROGRESS.md as items complete
 - Log significant decisions in DECISIONS.md
 
-### 5. Handoff (before session ends)
+### 5. Handoff (before ending)
 - Update HANDOFF.md with current state
+- Update sprint file if applicable (mark features as passing)
 - Commit all work
 - List open questions for human
 
 ---
 
-**Key principle:** Leave the codebase in a clean, working state. The next session
-(which might be a fresh context) should be able to pick up seamlessly.
+**Key principle:** Leave the codebase in a clean, working state.
+
+For NEW initiatives, use \`/plan\` instead.
 `;
 }
 
