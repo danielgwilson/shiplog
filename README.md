@@ -1,6 +1,6 @@
-# agent-harness
+# 🚢 shiplog
 
-Bootstrap infrastructure for long-running AI agents.
+Infrastructure for long-running AI agents. Track progress, decisions, and handoffs across sessions.
 
 Based on [Anthropic's research](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) on effective harnesses for agents that work across multiple context windows.
 
@@ -25,14 +25,14 @@ A **harness** — simple file-based infrastructure that enables:
 ## Installation
 
 ```bash
-npx agent-harness init
+npx shiplog init
 ```
 
 Or install globally:
 
 ```bash
-npm install -g agent-harness
-agent-harness init
+npm install -g shiplog
+shiplog init
 ```
 
 ## Usage
@@ -41,19 +41,19 @@ agent-harness init
 
 ```bash
 # Full setup (recommended)
-npx agent-harness init
+npx shiplog init
 
 # With custom project name
-npx agent-harness init --name "my-project"
+npx shiplog init --name "my-project"
 
 # Minimal setup (essential files only)
-npx agent-harness init --minimal
+npx shiplog init --minimal
 
 # Skip optional files
-npx agent-harness init --no-voice --no-features
+npx shiplog init --no-voice --no-features
 
 # Overwrite existing files
-npx agent-harness init --force
+npx shiplog init --force
 ```
 
 ### What it creates
@@ -155,10 +155,10 @@ Day 5: (Sprint complete) /plan "Mobile redesign"
 ## CLI Reference
 
 ```
-Usage: agent-harness [command] [options]
+Usage: shiplog [command] [options]
 
 Commands:
-  init          Initialize agent harness in current directory
+  init          Initialize shiplog in current directory
 
 Options:
   -V, --version    Output version number

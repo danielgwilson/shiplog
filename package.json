@@ -1,10 +1,10 @@
 {
-  "name": "agent-harness",
-  "version": "0.3.0",
-  "description": "Bootstrap infrastructure for long-running AI agents. Based on Anthropic research.",
+  "name": "shiplog",
+  "version": "1.0.0",
+  "description": "Infrastructure for long-running AI agents. Track progress, decisions, and handoffs across sessions.",
   "type": "module",
   "bin": {
-    "agent-harness": "./dist/index.js"
+    "shiplog": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -38,6 +38,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/danielgwilson/agent-harness"
+    "url": "https://github.com/danielgwilson/shiplog"
   }
 }

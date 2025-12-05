@@ -167,7 +167,7 @@ flowchart TD
 
 | Scenario | Workflow | Command |
 |----------|----------|---------|
-| New project from scratch | Build X | `agent-harness init --features` + `/ramp` |
+| New project from scratch | Build X | `shiplog init --features` + `/ramp` |
 | Starting new initiative on existing project | Evolve X | `/plan` to create sprint |
 | Continuing existing work | Either | `/ramp` to pick up where you left off |
 | Adding features post-launch | Evolve X | `/plan` for each major initiative |
@@ -514,7 +514,7 @@ Building effective long-running agents requires:
 3. **Simplicity** — Simple observation masking often beats complex summarization
 4. **Verification** — Don't mark features done until tested end-to-end
 
-The harness pattern provides this infrastructure. Use `agent-harness init` to bootstrap it for any project.
+The harness pattern provides this infrastructure. Use `shiplog init` to bootstrap it for any project.
 
 ---
 

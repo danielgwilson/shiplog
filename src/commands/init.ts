@@ -16,16 +16,16 @@ interface InitOptions {
 
 export const initCommand = new Command("init")
   .description(
-    "Initialize agent harness in the current directory.\n\n" +
+    "Initialize shiplog in the current directory.\n\n" +
       "Creates the infrastructure needed for long-running AI agent sessions:\n" +
-      "  - .claude/ directory with /ramp command and session checklist\n" +
+      "  - .claude/ directory with /status, /ramp, /plan commands\n" +
       "  - docs/ directory with progress tracking files\n" +
       "  - CLAUDE.md project instructions template\n\n" +
       "Examples:\n" +
-      "  $ agent-harness init                    # Full setup with all files\n" +
-      "  $ agent-harness init --name my-project  # Set project name in CLAUDE.md\n" +
-      "  $ agent-harness init --minimal          # Essential files only\n" +
-      "  $ agent-harness init --no-voice         # Skip CLAUDE_VOICE.md"
+      "  $ shiplog init                    # Full setup with all files\n" +
+      "  $ shiplog init --name my-project  # Set project name in CLAUDE.md\n" +
+      "  $ shiplog init --minimal          # Essential files only\n" +
+      "  $ shiplog init --no-voice         # Skip CLAUDE_VOICE.md"
   )
   .option("-n, --name <name>", "Project name for CLAUDE.md header")
   .option(
@@ -40,7 +40,7 @@ export const initCommand = new Command("init")
     const cwd = process.cwd();
     const projectName = options.name || path.basename(cwd);
 
-    console.log(`\n🚀 Initializing agent harness for: ${projectName}\n`);
+    console.log(`\n🚢 Initializing shiplog for: ${projectName}\n`);
 
     // Create directories
     const dirs = [".claude/commands", "docs", "docs/sprints"];
@@ -237,7 +237,7 @@ function getPROGRESSmd(): string {
 
 | Task | Date | Notes |
 |------|------|-------|
-| Initialize agent harness | ${new Date().toISOString().split("T")[0]} | Created docs/, .claude/ |
+| Initialize shiplog | ${new Date().toISOString().split("T")[0]} | Created docs/, .claude/ |
 
 ---
 
@@ -275,9 +275,9 @@ function getDECISIONSmd(): string {
 
 ---
 
-## ${new Date().toISOString().split("T")[0]}: Initialize Agent Harness
+## ${new Date().toISOString().split("T")[0]}: Initialize Shiplog
 
-**Decision:** Set up agent harness infrastructure for long-running sessions.
+**Decision:** Set up shiplog infrastructure for long-running sessions.
 
 **Reasoning:**
 Based on Anthropic's research on effective harnesses for long-running agents, we need:
@@ -322,7 +322,7 @@ function getHANDOFFmd(): string {
 
 ## What Was Done This Session
 
-- Initialized agent harness infrastructure
+- Initialized shiplog infrastructure
 - Created progress tracking files
 - Set up session workflow
 
