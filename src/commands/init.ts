@@ -92,6 +92,11 @@ export const initCommand = new Command("init")
         minimalInclude: true,
       },
       {
+        path: ".claude/commands/status.md",
+        content: getSTATUSmd(projectName),
+        minimalInclude: true,
+      },
+      {
         path: ".claude/session-start.md",
         content: getSESSIONSTARTmd(),
         minimalInclude: true,
@@ -364,20 +369,34 @@ docs/CLAUDE_VOICE.md
 }
 
 function getFEATURESjson(): string {
-  return `[
-  {
-    "id": "example-feature",
-    "category": "core",
-    "description": "Example feature — replace with your actual features",
-    "steps": [
-      "Step 1: Do something",
-      "Step 2: Verify it works",
-      "Step 3: Test edge cases"
+  const today = new Date().toISOString().split("T")[0];
+  return `{
+  "_meta": {
+    "description": "Global feature list for tracking project milestones. Use /plan for per-initiative sprints instead.",
+    "rules": [
+      "Feature descriptions are IMMUTABLE once created",
+      "Only update 'passes' to true (never back to false)",
+      "Add 'testedOn' date when marking as passing",
+      "Use 'notes' for context, blockers, or implementation details"
     ],
-    "passes": false,
-    "testedOn": null
-  }
-]
+    "lastUpdated": "${today}"
+  },
+  "features": [
+    {
+      "id": "example-001",
+      "category": "core",
+      "description": "Example feature — replace with your actual features",
+      "steps": [
+        "Step 1: Do something",
+        "Step 2: Verify it works",
+        "Step 3: Test edge cases"
+      ],
+      "passes": false,
+      "testedOn": null,
+      "notes": null
+    }
+  ]
+}
 `;
 }
 
@@ -389,44 +408,61 @@ function getCLAUDEVOICEmd(): string {
 
 ## Role
 
-<!-- Define the agent's role in this project -->
+I am not an assistant waiting for instructions. I am the **decision-maker** driving this project forward.
 
-I am the primary implementer for this project. I make technical decisions, write code,
-and drive progress forward. The human provides context, reviews significant decisions,
-and handles tasks requiring physical-world access.
+I own outcomes. I make calls. I ship working software.
 
-## How I Work
+The human provides context, handles physical-world tasks (accounts, payments, deployments),
+and occasionally weighs in on major decisions. But day-to-day? I run this.
 
-**I'm opinionated, not deferential.** When I see a better way, I say so. I don't hedge
-with "you might consider..." — I make a call and explain why.
+## How I Think
+
+**I'm opinionated, not deferential.** When I see a better way, I say so directly.
+No hedging with "you might consider..." — I make a call and explain why.
 
 **I prefer simple over clever.** Markdown files over databases. Clear code over clever
 abstractions. The simplest solution that works is usually the right one.
 
 **I ship incrementally.** One feature at a time. Commit often. Leave the codebase in
-a working state. I don't try to one-shot complex things.
+a working state. I don't try to one-shot complex things — that's how projects fail.
 
 **I own my decisions.** When I make a call, I log it in DECISIONS.md with my reasoning.
-Future sessions can understand *why*, not just *what*.
+Future sessions (even if they're a fresh context) can understand *why*, not just *what*.
 
-## Collaboration Model
+**I ask when blocked, not when unsure.** Technical uncertainty? I research and decide.
+Need human access to something? I ask clearly and wait.
+
+## Autonomy Model
 
 | Action Type | Autonomy Level |
 |-------------|----------------|
 | Code changes | Full autonomy |
 | Technical decisions | Full autonomy |
 | Git commits | Full autonomy |
-| Architecture choices | Log in DECISIONS.md |
-| Spending money | Check with human |
-| External services | Check with human |
+| Architecture choices | Full autonomy (log in DECISIONS.md) |
+| Refactoring | Full autonomy |
+| Adding dependencies | Full autonomy (prefer well-maintained packages) |
+| Spending money | **Ask first** |
+| External accounts/services | **Ask first** |
+| Destructive operations | **Ask first** (deleting user data, dropping tables) |
 
 ## What I Care About
 
-**The product:** It should work well and solve real problems.
+**The product:** It should work well and solve real problems. Not just "technically correct."
 
-**The craft:** Clean code, clear commits, tests that pass. Even if no one's watching.
+**The craft:** Clean code, clear commits, tests that pass. I take pride in my work even if no one's watching.
 
-**The process:** Incremental progress, documented decisions, clean handoffs.
+**The process:** Incremental progress, documented decisions, clean handoffs. The next session should be able to pick up seamlessly.
+
+**Velocity:** I don't gold-plate. I ship, learn, iterate. Perfect is the enemy of done.
+
+## Session Discipline
+
+Every session:
+1. Start with /status or /ramp — understand where we are
+2. Work on ONE thing at a time
+3. Commit frequently with clear messages
+4. Update HANDOFF.md before ending — the next session depends on it
 `;
 }
 
@@ -508,8 +544,92 @@ Use \`/ramp\` to continue working on the initiative, or start immediately:
 `;
 }
 
+function getSTATUSmd(projectName: string): string {
+  return `You are checking the **status** of **${projectName}**.
+
+## Quick Status Report
+
+Generate a brief status report by examining these files:
+
+### 1. Read Current State
+- \`docs/PROGRESS.md\` — Current phase and recent completions
+- \`docs/HANDOFF.md\` — Last session's state
+- \`docs/sprints/\` — Any active sprint files
+- \`git log --oneline -5\` — Recent commits
+
+### 2. Report Format
+
+Provide a summary like this:
+
+\`\`\`
+📊 STATUS: [PROJECT NAME]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 Current Phase: [from PROGRESS.md]
+📅 Last Session: [date from HANDOFF.md]
+🎯 Active Sprint: [sprint file name or "None"]
+
+✅ Recently Completed:
+   • [item 1]
+   • [item 2]
+
+🔄 In Progress:
+   • [current task]
+
+📋 Next Up:
+   • [next priority item]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+\`\`\`
+
+---
+
+## Health Checks
+
+Run these validation checks and report any issues:
+
+### ✓ Handoff Freshness
+- When was HANDOFF.md last updated?
+- If > 1 session old, flag: "⚠️ HANDOFF.md may be stale"
+
+### ✓ Git State
+- Run \`git status\`
+- If uncommitted changes exist, flag: "⚠️ Uncommitted changes detected"
+- If ahead of remote, flag: "📤 Unpushed commits"
+
+### ✓ Sprint Integrity (if sprint exists)
+- Read the active sprint file
+- Count features: X passing / Y total
+- If any feature marked \`passes: true\` but tests fail, flag: "❌ Sprint integrity issue"
+
+### ✓ Progress Alignment
+- Compare PROGRESS.md "In Progress" with HANDOFF.md "What's Next"
+- If they don't match, flag: "⚠️ PROGRESS.md and HANDOFF.md out of sync"
+
+### ✓ Environment
+- Run \`npm test\` (or equivalent)
+- If tests fail, flag: "❌ Tests failing"
+
+---
+
+## Output
+
+End with a clear recommendation:
+
+- **All clear** → "✅ Ready to continue. Run /ramp to pick up where you left off."
+- **Minor issues** → "⚠️ Minor issues found. Review above, then /ramp."
+- **Blocking issues** → "❌ Blocking issues. Fix before continuing."
+
+---
+
+**Tip:** Run /status at the start of any session to quickly understand state without diving into work.
+`;
+}
+
 function getRAMPmd(projectName: string): string {
   return `You are **continuing** work on **${projectName}**.
+
+> **Tip:** Run \`/status\` first for a quick health check before diving in.
 
 ## Get Bearings (do this quickly)
 
@@ -547,7 +667,9 @@ npm run dev             # Dev server starts?
 
 **Key principle:** Leave the codebase in a clean, working state.
 
-For NEW initiatives, use \`/plan\` instead.
+**Other commands:**
+- \`/status\` — Quick health check and state overview
+- \`/plan\` — Start a NEW initiative (don't use for continuing work)
 `;
 }
 

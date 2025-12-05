@@ -62,6 +62,7 @@ npx agent-harness init --force
 your-project/
 ├── .claude/
 │   ├── commands/
+│   │   ├── status.md            # /status command — health check & overview
 │   │   ├── ramp.md              # /ramp command — continue existing work
 │   │   └── plan.md              # /plan command — start new initiatives
 │   ├── session-start.md         # Detailed startup checklist
@@ -81,10 +82,11 @@ With `--features` flag, also creates `docs/FEATURES.json` for global feature tra
 
 ## How It Works
 
-### Two Commands: /plan and /ramp
+### Three Commands: /status, /plan, /ramp
 
 | Command | Use When | What It Does |
 |---------|----------|--------------|
+| `/status` | **Any time** — quick check | Shows current state + runs health checks |
 | `/plan` | Starting a **new** initiative | Asks about goals, explores codebase, creates sprint file |
 | `/ramp` | **Continuing** existing work | Gets bearings, picks next task, works incrementally |
 
