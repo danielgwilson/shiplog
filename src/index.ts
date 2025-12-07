@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { initCommand } from "./commands/init.js";
+import { upgradeCommand } from "./commands/upgrade.js";
 
 const program = new Command();
 
@@ -11,11 +12,13 @@ program
     "Infrastructure for long-running AI agents.\n\n" +
       "Track progress, decisions, and handoffs across sessions.\n" +
       "Based on Anthropic's research on effective harnesses for agents.\n\n" +
-      "Commands: /status (health check), /ramp (continue), /plan (new initiative)\n\n" +
+      "Primary command: /ship (auto-detects plan vs continue mode)\n" +
+      "Also: /ship design (creative work), /status (health check)\n\n" +
       "Learn more: https://github.com/danielgwilson/shiplog"
   )
-  .version("1.0.0");
+  .version("1.1.0");
 
 program.addCommand(initCommand);
+program.addCommand(upgradeCommand);
 
 program.parse();
