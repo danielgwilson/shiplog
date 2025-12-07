@@ -118,6 +118,11 @@ export const initCommand = new Command("init")
         content: getSessionEndHookSh(),
         minimalInclude: true,
       },
+      {
+        path: ".claude/hooks/session-start.sh",
+        content: getSessionStartHookSh(),
+        minimalInclude: true,
+      },
 
       // Optional (require explicit flag)
       {
@@ -165,6 +170,12 @@ export const initCommand = new Command("init")
       }
 
       fs.writeFileSync(filePath, file.content);
+
+      // Make shell scripts executable
+      if (file.path.endsWith('.sh')) {
+        fs.chmodSync(filePath, 0o755);
+      }
+
       console.log(`  ✅ Created ${file.path}`);
       created++;
     }
@@ -775,12 +786,16 @@ function getSETTINGSjson(): string {
     "deny": []
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+      }
+    ],
     "SessionEnd": [
       {
-        "hooks": [{
-          "type": "command",
-          "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
-        }]
+        "type": "command",
+        "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
       }
     ]
   }
@@ -972,14 +987,18 @@ function getSessionEndHookSh(): string {
 # Session End Hook - Captures metadata for cross-session continuity
 # This script runs automatically when a Claude Code session ends
 
-set -e
+# Don't fail on errors - we want this to be non-blocking
+set +e
+
+# Check required tools - exit silently if missing
+command -v jq >/dev/null 2>&1 || exit 0
 
 # Read hook input from stdin
 input=$(cat)
 
 # Extract session data
-transcript_path=$(echo "$input" | jq -r '.transcript_path // empty')
-cwd=$(echo "$input" | jq -r '.cwd // empty')
+transcript_path=$(echo "$input" | jq -r '.transcript_path // ""')
+cwd=$(echo "$input" | jq -r '.cwd // ""')
 reason=$(echo "$input" | jq -r '.reason // "unknown"')
 
 # Only proceed if we have a working directory
@@ -987,25 +1006,76 @@ if [ -z "$cwd" ] || [ ! -d "$cwd" ]; then
   exit 0
 fi
 
-cd "$cwd"
+cd "$cwd" || exit 0
 
 # Create metadata directory if needed
 mkdir -p .claude
 
-# Capture session metadata
-{
-  echo "{"
-  echo "  \\"timestamp\\": \\"$(date -Iseconds)\\","
-  echo "  \\"reason\\": \\"$reason\\","
-  echo "  \\"files_changed\\": ["
-  git diff --name-only HEAD 2>/dev/null | head -10 | sed 's/.*/"&"/' | paste -sd, - || echo ""
-  echo "  ],"
-  echo "  \\"recent_commits\\": ["
-  git log --oneline -5 2>/dev/null | sed 's/.*/"&"/' | paste -sd, - || echo ""
-  echo "  ],"
-  echo "  \\"transcript\\": \\"$transcript_path\\""
-  echo "}"
-} >> .claude/session-metadata.jsonl
+# Get git info (empty arrays if git not available or not a repo)
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  files_changed=$(git diff --name-only 2>/dev/null | head -10 | jq -R -s -c 'split("\\n") | map(select(length > 0))')
+  recent_commits=$(git log --oneline -5 2>/dev/null | jq -R -s -c 'split("\\n") | map(select(length > 0))')
+else
+  files_changed="[]"
+  recent_commits="[]"
+fi
+
+# Build and append single-line JSON (proper JSONL format)
+jq -n -c \\
+  --arg ts "$(date -Iseconds)" \\
+  --arg r "$reason" \\
+  --arg tp "$transcript_path" \\
+  --argjson fc "\${files_changed:-[]}" \\
+  --argjson rc "\${recent_commits:-[]}" \\
+  '{timestamp: $ts, reason: $r, files_changed: $fc, recent_commits: $rc, transcript: $tp}' \\
+  >> .claude/session-metadata.jsonl
+
+exit 0
+`;
+}
+
+function getSessionStartHookSh(): string {
+  return `#!/bin/bash
+# Session Start Hook - Displays previous session metadata for continuity
+# This script runs automatically when a Claude Code session starts
+
+set +e
+
+cwd="$CLAUDE_PROJECT_DIR"
+
+# Only proceed if we have a working directory
+if [ -z "$cwd" ] || [ ! -d "$cwd" ]; then
+  exit 0
+fi
+
+metadata_file="$cwd/.claude/session-metadata.jsonl"
+
+# Check if metadata file exists
+if [ ! -f "$metadata_file" ]; then
+  echo "📋 First session - no previous session data"
+  exit 0
+fi
+
+# Get the last session entry
+last_entry=$(tail -1 "$metadata_file" 2>/dev/null)
+
+if [ -z "$last_entry" ]; then
+  echo "📋 No previous session data found"
+  exit 0
+fi
+
+# Check if jq is available for pretty printing
+if command -v jq >/dev/null 2>&1; then
+  echo "📋 Previous session summary:"
+  echo "$last_entry" | jq -r '
+    "  Ended: \\(.timestamp // \"unknown\")",
+    "  Reason: \\(.reason // \"unknown\")",
+    "  Files changed: \\((.files_changed // []) | length)",
+    "  Recent commits: \\((.recent_commits // []) | length)"
+  ' 2>/dev/null || echo "  (Could not parse session data)"
+else
+  echo "📋 Previous session: $last_entry"
+fi
 
 exit 0
 `;
