@@ -1,0 +1,37 @@
+{
+  "initiative": "E2E Test Suite",
+  "created": "2025-12-08",
+  "status": "completed",
+  "features": [
+    {
+      "id": "test-001",
+      "description": "Set up Vitest with proper configuration",
+      "steps": ["Install vitest", "Configure vitest.config.ts", "Add test scripts to package.json"],
+      "passes": true
+    },
+    {
+      "id": "test-002",
+      "description": "E2E tests for init command",
+      "steps": ["Test file creation", "Test project name", "Test --force flag", "Test mcpServer preservation"],
+      "passes": true
+    },
+    {
+      "id": "test-003",
+      "description": "E2E tests for upgrade command",
+      "steps": ["Test v1 to v2 upgrade", "Test backup creation", "Test mcpServer preservation", "Test already-upgraded detection"],
+      "passes": true
+    },
+    {
+      "id": "test-004",
+      "description": "Hook format validation tests",
+      "steps": ["Test settings.local.json structure", "Test matcher format", "Test hook script execution"],
+      "passes": true
+    },
+    {
+      "id": "test-005",
+      "description": "GitHub Actions CI",
+      "steps": ["Create workflow file", "Test on Node 18/20/22", "Add TypeScript check"],
+      "passes": true
+    }
+  ]
+}

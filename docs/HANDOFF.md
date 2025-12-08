@@ -2,53 +2,55 @@
 
 > Capture current session state so the next session can pick up seamlessly.
 
-**Last Updated:** 2025-12-07
-**Status:** Initial Setup
+**Last Updated:** 2025-12-08
+**Status:** E2E Tests Complete
 
 ---
 
 ## What Was Done This Session
 
-- Initialized shiplog infrastructure
-- Created progress tracking files
-- Set up session workflow
+- Added comprehensive E2E test suite using Vitest
+- 23 tests covering:
+  - `init` command (file creation, project name, --force, mcpServer preservation)
+  - `upgrade` command (v1→v2, backup, mcpServer preservation, already-upgraded detection)
+  - settings.local.json format (valid JSON, hook matcher format, permissions)
+  - Hook scripts (session-end.sh JSONL output, session-start.sh display)
+  - Command file content (driver's seat persona, mode detection, /ship redirects)
+- Set up GitHub Actions CI (tests on Node 18/20/22)
+- Excluded tests from TypeScript build to avoid duplicate test runs
 
 ---
 
 ## Current State
 
-- **Git:** Clean (no uncommitted changes)
-- **Tests:** Not yet configured
-- **Build:** Not yet configured
+- **Git:** Clean after commit
+- **Tests:** 23 passing
+- **Build:** Working
 
 ---
 
 ## What's Next
 
-1. Review and customize CLAUDE.md
-2. Define project features in FEATURES.json
-3. Set up development environment
+1. Publish to npm (make `npx shiplog init` work publicly)
+2. Consider adding more edge case tests
 
 ---
 
 ## Open Questions for Human
 
-<!-- Questions that need human input -->
-
-1. What are the priority features to build first?
+None - E2E test suite is complete and CI is configured.
 
 ---
 
 ## Files Changed This Session
 
 ```
-CLAUDE.md
+package.json                    # Added test scripts, vitest dep
+tsconfig.json                   # Excluded __tests__ from build
+vitest.config.ts                # Test configuration
+src/__tests__/e2e.test.ts       # 23 E2E tests
+.github/workflows/ci.yml        # GitHub Actions CI
+docs/sprints/2025-12-08-e2e-tests.json
 docs/PROGRESS.md
-docs/DECISIONS.md
 docs/HANDOFF.md
-docs/FEATURES.json
-docs/CLAUDE_VOICE.md
-.claude/commands/ramp.md
-.claude/session-start.md
-.claude/settings.local.json
 ```
