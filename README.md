@@ -62,18 +62,22 @@ npx shiplog init --force
 your-project/
 ├── .claude/
 │   ├── commands/
+│   │   ├── ship.md              # /ship command — unified entry point (v2)
+│   │   ├── ship-design.md       # /ship design — creative/aesthetic mode
 │   │   ├── status.md            # /status command — health check & overview
-│   │   ├── ramp.md              # /ramp command — continue existing work
-│   │   └── plan.md              # /plan command — start new initiatives
-│   ├── session-start.md         # Detailed startup checklist
-│   └── settings.local.json      # Tool permissions template
+│   │   ├── ramp.md              # /ramp command — redirects to /ship
+│   │   └── plan.md              # /plan command — redirects to /ship
+│   ├── hooks/
+│   │   ├── session-start.sh     # Displays previous session info
+│   │   └── session-end.sh       # Captures session metadata (JSONL)
+│   └── settings.local.json      # Tool permissions + hooks config
 │
 ├── docs/
 │   ├── sprints/                 # Per-initiative feature tracking
 │   ├── PROGRESS.md              # Task tracking across sessions
 │   ├── DECISIONS.md             # Decision log with reasoning
 │   ├── HANDOFF.md               # Current session state
-│   └── CLAUDE_VOICE.md          # Agent persona template
+│   └── CLAUDE_VOICE.md          # Agent persona template (optional)
 │
 └── CLAUDE.md                    # Project instructions
 ```
@@ -170,6 +174,7 @@ Usage: shiplog [command] [options]
 
 Commands:
   init          Initialize shiplog in current directory
+  upgrade       Upgrade existing v1 installation to v2
 
 Options:
   -V, --version    Output version number
@@ -181,7 +186,10 @@ Init Options:
   --no-voice           Skip CLAUDE_VOICE.md template
   --features           Include global FEATURES.json (use /plan for per-initiative instead)
   -f, --force          Overwrite existing files
-  -h, --help           Display help for init command
+
+Upgrade Options:
+  -f, --force          Re-apply templates even if already v2
+  --no-backup          Skip backing up existing commands
 ```
 
 ## Research
