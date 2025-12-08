@@ -169,6 +169,27 @@ export const initCommand = new Command("init")
         continue;
       }
 
+      // Special handling for settings.local.json - preserve mcpServers
+      if (file.path === ".claude/settings.local.json" && fs.existsSync(filePath)) {
+        try {
+          const existing = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+          if (existing.mcpServers) {
+            const newSettings = JSON.parse(file.content);
+            newSettings.mcpServers = existing.mcpServers;
+            fs.writeFileSync(filePath, JSON.stringify(newSettings, null, 2) + "\n");
+            console.log(`  🔄 Updated ${file.path} (preserved mcpServers)`);
+            created++;
+            continue;
+          }
+        } catch (e) {
+          // If parsing fails, warn but don't overwrite
+          console.log(`  ⚠️  Skipped ${file.path} (could not parse existing file)`);
+          console.log(`     Your mcpServers config was preserved.`);
+          skipped++;
+          continue;
+        }
+      }
+
       fs.writeFileSync(filePath, file.content);
 
       // Make shell scripts executable
@@ -788,14 +809,24 @@ function getSETTINGSjson(): string {
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+        "matcher": {},
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
       }
     ],
     "SessionEnd": [
       {
-        "type": "command",
-        "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
+        "matcher": {},
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
+          }
+        ]
       }
     ]
   }

@@ -159,7 +159,7 @@ export const upgradeCommand = new Command("upgrade")
       }
     }
 
-    // Update settings.local.json to include hooks
+    // Update settings.local.json to include hooks (preserve existing config!)
     const settingsPath = path.join(claudeDir, "settings.local.json");
     let settingsUpdated = false;
 
@@ -172,26 +172,36 @@ export const upgradeCommand = new Command("upgrade")
           existingSettings.hooks = {
             SessionStart: [
               {
-                type: "command",
-                command: "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+                matcher: {},
+                hooks: [
+                  {
+                    type: "command",
+                    command: "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+                  }
+                ]
               }
             ],
             SessionEnd: [
               {
-                type: "command",
-                command: "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
+                matcher: {},
+                hooks: [
+                  {
+                    type: "command",
+                    command: "bash $CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh"
+                  }
+                ]
               }
             ]
           };
           fs.writeFileSync(settingsPath, JSON.stringify(existingSettings, null, 2) + "\n");
-          console.log(`  🔄 Updated .claude/settings.local.json (added hooks)`);
+          console.log(`  🔄 Updated .claude/settings.local.json (added hooks, preserved mcpServers)`);
           settingsUpdated = true;
         }
       } catch (e) {
-        // If parsing fails, just overwrite with new settings
-        fs.writeFileSync(settingsPath, getSETTINGSjson());
-        console.log(`  🔄 Replaced .claude/settings.local.json`);
-        settingsUpdated = true;
+        // If parsing fails, DON'T overwrite - user may have mcpServers or other config
+        console.log(`  ⚠️  Could not parse .claude/settings.local.json`);
+        console.log(`     Hooks not added. Please manually add hooks config.`);
+        console.log(`     (Your mcpServers and other settings were preserved)`);
       }
     } else {
       fs.writeFileSync(settingsPath, getSETTINGSjson());
