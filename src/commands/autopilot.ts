@@ -14,6 +14,8 @@ interface AutopilotOptions {
   stallThreshold: number;
   timeout: number; // Session timeout in seconds
   maxRetries: number; // Max retries per session on failure
+  resume: boolean; // Continue from interrupted state
+  fresh: boolean; // Start fresh, ignore existing state
   dryRun: boolean;
 }
 
@@ -527,6 +529,16 @@ EXAMPLES
     "2"
   )
   .option(
+    "--resume",
+    "Continue from interrupted autopilot run",
+    false
+  )
+  .option(
+    "--fresh",
+    "Start fresh, ignore any existing state",
+    false
+  )
+  .option(
     "--dry-run",
     "Preview the prompt and settings without running Claude",
     false
@@ -583,16 +595,59 @@ EXAMPLES
     // Ensure .shiplog directory exists
     ensureShiplogDir(cwd);
 
-    // Initialize or load state
-    let state: AutopilotState = loadState(cwd) || {
-      initiative: sprintTask.initiative,
-      started: new Date().toISOString(),
-      iterations: 0,
-      totalCommits: 0,
-      stallCount: 0,
-      sessions: [],
-      status: "running",
-    };
+    // Handle resume/fresh flags
+    const existingState = loadState(cwd);
+    let state: AutopilotState;
+
+    if (options.fresh) {
+      // Start fresh - ignore existing state
+      console.log("\n🆕 Starting fresh (--fresh flag)");
+      state = {
+        initiative: sprintTask.initiative,
+        started: new Date().toISOString(),
+        iterations: 0,
+        totalCommits: 0,
+        stallCount: 0,
+        sessions: [],
+        status: "running",
+      };
+    } else if (options.resume) {
+      // Resume from existing state
+      if (!existingState) {
+        console.log("\n❌ No existing state to resume from.");
+        console.log("   Run without --resume to start fresh.\n");
+        process.exit(1);
+      }
+      if (existingState.status === "completed") {
+        console.log("\n✅ Previous run completed successfully.");
+        console.log("   Run with --fresh to start a new run.\n");
+        process.exit(0);
+      }
+      console.log("\n▶️  Resuming from interrupted run (--resume flag)");
+      console.log(`   Previous sessions: ${existingState.sessions.length}`);
+      console.log(`   Previous commits: ${existingState.totalCommits}`);
+      state = existingState;
+      state.status = "running";
+    } else if (existingState && existingState.status === "interrupted") {
+      // Auto-resume interrupted runs
+      console.log("\n▶️  Resuming interrupted run");
+      console.log(`   Previous sessions: ${existingState.sessions.length}`);
+      console.log(`   Previous commits: ${existingState.totalCommits}`);
+      console.log("   (Use --fresh to start over)");
+      state = existingState;
+      state.status = "running";
+    } else {
+      // Start fresh
+      state = {
+        initiative: sprintTask.initiative,
+        started: new Date().toISOString(),
+        iterations: 0,
+        totalCommits: 0,
+        stallCount: 0,
+        sessions: [],
+        status: "running",
+      };
+    }
 
     // Track state for interrupt handler
     currentState = state;
