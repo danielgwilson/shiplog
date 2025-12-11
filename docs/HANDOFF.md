@@ -3,68 +3,77 @@
 > Capture current session state so the next session can pick up seamlessly.
 
 **Last Updated:** 2025-12-11
-**Status:** v1.2.0 ready for publish
+**Status:** Autopilot robustness improvements complete
 
 ---
 
 ## What Was Done This Session
 
-### Added `shiplog autopilot` command
-New command that runs Claude Code in an autonomous loop with learning between sessions. Inspired by the ACE (Agentic Context Engine) framework.
+### Fixed Autopilot Output Streaming
+The autopilot command was hanging at "Starting Claude session" because `spawnSync` with `stdio: ['pipe', 'inherit', 'inherit']` doesn't properly stream output when running through the CLI. Fixed by using async `spawn` with event handlers.
 
-**How it works:**
-1. Run Claude with current sprint task + accumulated learnings
-2. When Claude exits, extract learnings from the session
-3. Inject learnings into next session's prompt
-4. Repeat until stall (no commits) or sprint complete
+### Added Robustness Features to Autopilot
+Implemented 5 of 6 planned features from the autopilot-robustness sprint:
 
-**Features:**
-- Session telemetry logging to `.shiplog/sessions/`
-- Skillbook lite (`docs/SKILLBOOK.md`) - learnings persist across sessions
-- Stall detection (stops after N iterations with no commits)
-- Auto-continue prompt generation with sprint context
-- `--dry-run` mode for testing
+1. **Graceful Interrupt Handling (Ctrl+C)**
+   - SIGINT/SIGTERM handlers save state before exit
+   - Current session marked as interrupted
+   - Exit code 130 (standard SIGINT code)
 
-**Usage:**
-```bash
-shiplog autopilot              # Run with defaults (20 iterations, 3 stall threshold)
-shiplog autopilot --dry-run    # Preview without running
-shiplog autopilot -n 10 -s 2   # 10 iterations max, 2 stall threshold
-```
+2. **Session Timeout (`-t/--timeout`)**
+   - Default 30 minutes per session
+   - Kills Claude if session exceeds timeout
+   - Records timeout in session log
 
-**Files changed:**
-- `src/commands/autopilot.ts` (new - 350 lines)
-- `src/index.ts` (register command)
-- `src/__tests__/e2e.test.ts` (9 new tests, 42 total)
-- `package.json` (version bump to 1.2.0)
-- `docs/DECISIONS.md` (design decision logged)
-- `docs/sprints/2025-12-11-autopilot.json` (sprint file)
+3. **Improved Progress Detection**
+   - Track file changes via `git diff`
+   - Track sprint file modifications
+   - File changes = "soft progress" (prevents false stalls)
+   - Only stall when no commits AND no file changes
+
+4. **Retry Logic (`-r/--max-retries`)**
+   - Default 2 retries on non-zero exit codes
+   - Exponential backoff (5s, 10s, 20s...)
+   - Don't retry on timeout
+   - Record retries in session log
+
+5. **Resume/Fresh Flags**
+   - `--resume`: Continue from interrupted run
+   - `--fresh`: Start fresh, ignore existing state
+   - Auto-resume interrupted runs by default
+
+**Not implemented:** Interactive PTY mode (robust-005) - complex, current `--print` mode works
 
 ---
 
 ## Current State
 
-- **Version:** 1.2.0
-- **Git:** Uncommitted changes ready for commit
-- **Tests:** 42 passing
-- **CI:** Should pass
+- **Version:** 1.2.0 (should bump to 1.2.1)
+- **Git:** All changes committed
+- **Tests:** Not updated (should add autopilot tests)
+- **Sprint:** 5/6 features complete
 
 ---
 
 ## What's Next
 
-1. Commit and push changes
-2. Publish v1.2.0 to npm
-3. Update README with autopilot documentation
-4. Test autopilot in real usage
-5. Iterate based on feedback
+1. Bump version to 1.2.1
+2. Test autopilot with real sprint
+3. Publish to npm
+4. Consider adding tests for new features
 
 ---
 
-## Open Questions for Human
+## Recent Commits (this session)
 
-1. Ready to publish v1.2.0?
-2. Should we test autopilot on a real sprint before publishing?
+```
+feat: add --resume and --fresh flags for autopilot state management
+feat: add retry logic for failed Claude sessions
+feat: improve progress detection beyond just commits
+feat: add session timeout with configurable duration
+feat: add graceful interrupt handling (Ctrl+C)
+fix: use async spawn for real-time Claude output streaming
+```
 
 ---
 
@@ -72,4 +81,3 @@ shiplog autopilot -n 10 -s 2   # 10 iterations max, 2 stall threshold
 
 - npm: https://www.npmjs.com/package/shiplog
 - GitHub: https://github.com/danielgwilson/shiplog
-- ACE Inspiration: https://github.com/kayba-ai/agentic-context-engine
