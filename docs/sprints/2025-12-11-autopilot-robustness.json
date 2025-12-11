@@ -61,7 +61,7 @@
         "Offer to resume or start fresh",
         "Continue from last session"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
