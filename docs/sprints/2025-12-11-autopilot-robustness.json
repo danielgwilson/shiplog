@@ -11,7 +11,7 @@
         "Mark current session as interrupted",
         "Exit with appropriate code"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "robust-002",
