@@ -430,6 +430,174 @@ describe('command files content', () => {
   });
 });
 
+describe('shiplog autopilot', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = createTempDir();
+    runShiplog('init --name test-project', tempDir);
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('fails when no active sprint exists', () => {
+    // No sprint file created yet
+    const output = runShiplog('autopilot --dry-run', tempDir, true);
+
+    expect(output).toContain('No active sprint found');
+  });
+
+  it('detects active sprint with incomplete features', () => {
+    // Create a sprint file with incomplete features
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Test Feature',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [
+        { id: 'feat-001', description: 'First feature', passes: false },
+        { id: 'feat-002', description: 'Second feature', passes: false }
+      ]
+    }, null, 2));
+
+    const output = runShiplog('autopilot --dry-run', tempDir, true);
+
+    expect(output).toContain('Test Feature');
+    expect(output).toContain('First feature');
+    expect(output).toContain('DRY RUN');
+  });
+
+  it('creates .shiplog directory structure', () => {
+    // Create a sprint
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Test',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [{ id: 'f1', description: 'Test', passes: false }]
+    }, null, 2));
+
+    runShiplog('autopilot --dry-run', tempDir, true);
+
+    expect(fs.existsSync(path.join(tempDir, '.shiplog'))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, '.shiplog/sessions'))).toBe(true);
+  });
+
+  it('generates continuation prompt with sprint info', () => {
+    // Create a sprint
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Awesome Feature',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [{ id: 'f1', description: 'Build the thing', passes: false }]
+    }, null, 2));
+
+    const output = runShiplog('autopilot --dry-run', tempDir, true);
+
+    // Check prompt contains task info
+    expect(output).toContain('Awesome Feature');
+    expect(output).toContain('Build the thing');
+    expect(output).toContain('autopilot mode');
+  });
+
+  it('includes skillbook in prompt when present', () => {
+    // Create skillbook
+    fs.writeFileSync(
+      path.join(tempDir, 'docs/SKILLBOOK.md'),
+      '## What Works\n- Always run tests\n'
+    );
+
+    // Create a sprint
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Test',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [{ id: 'f1', description: 'Test', passes: false }]
+    }, null, 2));
+
+    const output = runShiplog('autopilot --dry-run', tempDir, true);
+
+    expect(output).toContain('Always run tests');
+    expect(output).toContain('Learnings');
+  });
+
+  it('shows max iterations and stall threshold', () => {
+    // Create a sprint
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Test',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [{ id: 'f1', description: 'Test', passes: false }]
+    }, null, 2));
+
+    const output = runShiplog('autopilot -n 5 -s 2 --dry-run', tempDir, true);
+
+    expect(output).toContain('Max iterations: 5');
+    expect(output).toContain('Stall threshold: 2');
+  });
+
+  it('adds .shiplog to .gitignore', () => {
+    // Create .gitignore
+    fs.writeFileSync(path.join(tempDir, '.gitignore'), 'node_modules/\n');
+
+    // Create a sprint
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Test',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [{ id: 'f1', description: 'Test', passes: false }]
+    }, null, 2));
+
+    runShiplog('autopilot --dry-run', tempDir, true);
+
+    const gitignore = fs.readFileSync(path.join(tempDir, '.gitignore'), 'utf-8');
+    expect(gitignore).toContain('.shiplog/');
+  });
+
+  it('skips completed sprints', () => {
+    // Create a completed sprint
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Complete',
+      created: '2025-12-11',
+      status: 'completed',
+      features: [{ id: 'f1', description: 'Done', passes: true }]
+    }, null, 2));
+
+    const output = runShiplog('autopilot --dry-run', tempDir, true);
+
+    // Should not find active sprint
+    expect(output).toContain('No active sprint found');
+  });
+
+  it('finds next incomplete feature', () => {
+    // Create a sprint with mix of complete/incomplete
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-11-test.json');
+    fs.writeFileSync(sprintPath, JSON.stringify({
+      initiative: 'Mixed',
+      created: '2025-12-11',
+      status: 'in_progress',
+      features: [
+        { id: 'f1', description: 'Already done', passes: true },
+        { id: 'f2', description: 'Not started', passes: false },
+        { id: 'f3', description: 'Also pending', passes: false }
+      ]
+    }, null, 2));
+
+    const output = runShiplog('autopilot --dry-run', tempDir, true);
+
+    // Should show next incomplete feature, not the completed one
+    expect(output).toContain('Not started');
+    expect(output).not.toContain('Already done');
+  });
+});
+
 describe('shiplog doctor', () => {
   let tempDir: string;
 

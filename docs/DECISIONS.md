@@ -4,6 +4,37 @@
 
 ---
 
+## 2025-12-11: Autopilot Mode (Inspired by ACE Framework)
+
+**Decision:** Implement an outer orchestration loop that enables truly autonomous agent sessions.
+
+**Research Source:**
+- Reddit: r/ClaudeAI post about running Claude Code in self-learning loop
+- GitHub: kayba-ai/agentic-context-engine (ACE framework)
+
+**Key Insight:** ACE doesn't run one infinite session. It runs **multiple sessions** with learning injected between them:
+1. Run Claude Code until it exits (context exhausted or done)
+2. Reflector analyzes what worked/failed
+3. SkillManager updates a "skillbook" of strategies
+4. Restart Claude Code with skillbook injected
+5. Repeat until stall detected (no commits for N iterations)
+
+**What We're Adopting:**
+1. **Session telemetry** - Log what happened for human observability
+2. **Skillbook lite** - Simple learnings file agents update
+3. **Autopilot command** - Outer loop that restarts Claude with learnings
+
+**Alternatives Considered:**
+1. **Full ACE integration** — Too heavy, requires Python, external API calls
+2. **Just better prompts** — Doesn't solve context exhaustion problem
+3. **MCP server approach** — More complex, less portable
+
+**Reasoning:** The lightest thing that could work. Node-native, builds on existing shiplog patterns, gives human full observability.
+
+**Owner:** Claude
+
+---
+
 ## 2025-12-10: Fix hook matcher format (must be string, not object)
 
 **Decision:** Changed `"matcher": {}` to `"matcher": ""` in settings.local.json generation.

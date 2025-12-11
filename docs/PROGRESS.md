@@ -25,6 +25,7 @@
 | Make repo public | 2025-12-08 | github.com/danielgwilson/shiplog |
 | **Fix hook matcher format** | 2025-12-10 | Changed `{}` to `""` - Claude Code requires string |
 | **Add doctor command** | 2025-12-11 | v1.1.4 - validates installation health, auto-fixes issues |
+| **Autopilot Mode** | 2025-12-11 | v1.2.0 - outer loop for truly autonomous sessions (ACE-inspired) |
 
 ---
 
@@ -57,4 +58,5 @@
 - v1.1.2: New README with badges and driver's seat philosophy
 - v1.1.3: Hook matcher fix (string not object)
 - v1.1.4: Doctor command for health validation
+- v1.2.0: Autopilot mode - outer loop for autonomous sessions (ACE-inspired)
 - Repo is now PUBLIC

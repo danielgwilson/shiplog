@@ -1,0 +1,74 @@
+{
+  "initiative": "Autopilot Mode",
+  "created": "2025-12-11",
+  "status": "completed",
+  "inspiration": "kayba-ai/agentic-context-engine (ACE framework)",
+  "goal": "Enable truly autonomous agent sessions that can run for hours without human intervention",
+  "features": [
+    {
+      "id": "auto-001",
+      "description": "Session telemetry logging to .shiplog/sessions/",
+      "steps": [
+        "Create .shiplog/sessions/ directory structure",
+        "Log session start/end with timestamps",
+        "Track commits made during session",
+        "Track features completed from sprint",
+        "Track errors encountered",
+        "Verify logs are human-readable JSON"
+      ],
+      "passes": true
+    },
+    {
+      "id": "auto-002",
+      "description": "Skillbook lite - learnings file that persists across sessions",
+      "steps": [
+        "Create docs/SKILLBOOK.md template",
+        "Define structure: what works, what to avoid, patterns",
+        "Add SKILLBOOK.md reference to CLAUDE.md",
+        "Verify skillbook is loaded in agent context"
+      ],
+      "passes": true
+    },
+    {
+      "id": "auto-003",
+      "description": "shiplog autopilot command - outer orchestration loop",
+      "steps": [
+        "Create src/commands/autopilot.ts",
+        "Spawn claude process with sprint task",
+        "Monitor for exit (context exhaustion or completion)",
+        "On exit: count commits since start",
+        "On exit: update session telemetry",
+        "Detect stall (N iterations with no commits)",
+        "Restart claude with fresh context + learnings",
+        "Add --max-iterations flag with sensible default",
+        "Add --stall-threshold flag (default 4)",
+        "Register command in index.ts"
+      ],
+      "passes": true
+    },
+    {
+      "id": "auto-004",
+      "description": "Learnings extraction - analyze session and update skillbook",
+      "steps": [
+        "Read git log for session commits",
+        "Analyze commit messages for patterns",
+        "Extract what worked (successful commits)",
+        "Extract what failed (reverts, fix commits)",
+        "Append to SKILLBOOK.md",
+        "Keep skillbook under token limit (trim old entries)"
+      ],
+      "passes": true
+    },
+    {
+      "id": "auto-005",
+      "description": "Auto-continue prompt generation",
+      "steps": [
+        "On session end, generate continuation prompt",
+        "Include: current sprint status, next feature, recent learnings",
+        "Pass to next claude invocation",
+        "Verify seamless handoff between sessions"
+      ],
+      "passes": true
+    }
+  ]
+}

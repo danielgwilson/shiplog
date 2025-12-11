@@ -3,51 +3,68 @@
 > Capture current session state so the next session can pick up seamlessly.
 
 **Last Updated:** 2025-12-11
-**Status:** v1.1.4 published
+**Status:** v1.2.0 ready for publish
 
 ---
 
 ## What Was Done This Session
 
-### Added `shiplog doctor` command
-New health check command that validates shiplog installation:
-- Checks all required directories and files exist
-- Validates settings.local.json hook format (catches the matcher bug!)
-- Detects v1 vs v2 installations
-- Checks hook scripts are executable
-- Reports issues with suggested fixes
-- `--fix` flag to auto-repair issues
+### Added `shiplog autopilot` command
+New command that runs Claude Code in an autonomous loop with learning between sessions. Inspired by the ACE (Agentic Context Engine) framework.
 
-Also fixed this project's own settings.local.json (was using old hook format).
+**How it works:**
+1. Run Claude with current sprint task + accumulated learnings
+2. When Claude exits, extract learnings from the session
+3. Inject learnings into next session's prompt
+4. Repeat until stall (no commits) or sprint complete
 
-Files changed:
-- `src/commands/doctor.ts` (new)
+**Features:**
+- Session telemetry logging to `.shiplog/sessions/`
+- Skillbook lite (`docs/SKILLBOOK.md`) - learnings persist across sessions
+- Stall detection (stops after N iterations with no commits)
+- Auto-continue prompt generation with sprint context
+- `--dry-run` mode for testing
+
+**Usage:**
+```bash
+shiplog autopilot              # Run with defaults (20 iterations, 3 stall threshold)
+shiplog autopilot --dry-run    # Preview without running
+shiplog autopilot -n 10 -s 2   # 10 iterations max, 2 stall threshold
+```
+
+**Files changed:**
+- `src/commands/autopilot.ts` (new - 350 lines)
 - `src/index.ts` (register command)
-- `src/__tests__/e2e.test.ts` (10 new tests, 33 total)
-- `package.json` (version bump)
+- `src/__tests__/e2e.test.ts` (9 new tests, 42 total)
+- `package.json` (version bump to 1.2.0)
+- `docs/DECISIONS.md` (design decision logged)
+- `docs/sprints/2025-12-11-autopilot.json` (sprint file)
 
 ---
 
 ## Current State
 
-- **Version:** 1.1.4
-- **Git:** Committed, ready to push
-- **Tests:** 33 passing
+- **Version:** 1.2.0
+- **Git:** Uncommitted changes ready for commit
+- **Tests:** 42 passing
 - **CI:** Should pass
 
 ---
 
 ## What's Next
 
-1. Users can run `shiplog doctor` to check their installation
-2. Users can run `shiplog doctor --fix` to auto-repair issues
-3. Promote / share - tweet, get feedback
+1. Commit and push changes
+2. Publish v1.2.0 to npm
+3. Update README with autopilot documentation
+4. Test autopilot in real usage
+5. Iterate based on feedback
 
 ---
 
 ## Open Questions for Human
 
-None - v1.1.4 is live!
+1. Ready to publish v1.2.0?
+2. Should we test autopilot on a real sprint before publishing?
 
 ---
 
@@ -55,4 +72,4 @@ None - v1.1.4 is live!
 
 - npm: https://www.npmjs.com/package/shiplog
 - GitHub: https://github.com/danielgwilson/shiplog
-- Author X: https://x.com/the_danny_g
+- ACE Inspiration: https://github.com/kayba-ai/agentic-context-engine

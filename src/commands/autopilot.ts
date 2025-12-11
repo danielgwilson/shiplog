@@ -1,0 +1,513 @@
+import { Command } from "commander";
+import * as fs from "fs";
+import * as path from "path";
+import { spawn, execSync } from "child_process";
+
+interface AutopilotOptions {
+  maxIterations: number;
+  stallThreshold: number;
+  dryRun: boolean;
+}
+
+interface SessionLog {
+  sessionId: string;
+  iteration: number;
+  startTime: string;
+  endTime?: string;
+  startCommits: number;
+  endCommits?: number;
+  commitsMade?: number;
+  exitCode?: number;
+  status: "running" | "completed" | "stalled" | "error";
+}
+
+interface AutopilotState {
+  initiative: string;
+  started: string;
+  iterations: number;
+  totalCommits: number;
+  stallCount: number;
+  sessions: SessionLog[];
+  status: "running" | "completed" | "stalled" | "interrupted";
+}
+
+function getCommitCount(cwd: string): number {
+  try {
+    const result = execSync("git rev-list --count HEAD", {
+      cwd,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return parseInt(result.trim(), 10) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function getRecentCommitMessages(cwd: string, count: number): string[] {
+  try {
+    const result = execSync(`git log -${count} --format="%s"`, {
+      cwd,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return result.trim().split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function getCurrentSprintTask(cwd: string): { initiative: string; task: string } | null {
+  const sprintsDir = path.join(cwd, "docs/sprints");
+  if (!fs.existsSync(sprintsDir)) return null;
+
+  const files = fs.readdirSync(sprintsDir).filter((f) => f.endsWith(".json"));
+  if (files.length === 0) return null;
+
+  // Get most recent sprint file
+  const sortedFiles = files.sort().reverse();
+
+  for (const file of sortedFiles) {
+    try {
+      const sprint = JSON.parse(
+        fs.readFileSync(path.join(sprintsDir, file), "utf-8")
+      );
+      if (sprint.status === "in_progress") {
+        // Find first incomplete feature
+        const nextFeature = sprint.features?.find(
+          (f: { passes: boolean }) => !f.passes
+        );
+        if (nextFeature) {
+          return {
+            initiative: sprint.initiative,
+            task: nextFeature.description,
+          };
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function loadSkillbook(cwd: string): string {
+  const skillbookPath = path.join(cwd, "docs/SKILLBOOK.md");
+  if (fs.existsSync(skillbookPath)) {
+    return fs.readFileSync(skillbookPath, "utf-8");
+  }
+  return "";
+}
+
+function ensureShiplogDir(cwd: string): string {
+  const shiplogDir = path.join(cwd, ".shiplog");
+  const sessionsDir = path.join(shiplogDir, "sessions");
+
+  if (!fs.existsSync(shiplogDir)) {
+    fs.mkdirSync(shiplogDir, { recursive: true });
+  }
+  if (!fs.existsSync(sessionsDir)) {
+    fs.mkdirSync(sessionsDir, { recursive: true });
+  }
+
+  // Add to .gitignore if not already there
+  const gitignorePath = path.join(cwd, ".gitignore");
+  if (fs.existsSync(gitignorePath)) {
+    const gitignore = fs.readFileSync(gitignorePath, "utf-8");
+    if (!gitignore.includes(".shiplog/")) {
+      fs.appendFileSync(gitignorePath, "\n# Shiplog session data\n.shiplog/\n");
+    }
+  }
+
+  return sessionsDir;
+}
+
+function saveState(cwd: string, state: AutopilotState): void {
+  const statePath = path.join(cwd, ".shiplog/autopilot-state.json");
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
+}
+
+function loadState(cwd: string): AutopilotState | null {
+  const statePath = path.join(cwd, ".shiplog/autopilot-state.json");
+  if (fs.existsSync(statePath)) {
+    try {
+      return JSON.parse(fs.readFileSync(statePath, "utf-8"));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function generateContinuationPrompt(
+  cwd: string,
+  iteration: number,
+  sprintTask: { initiative: string; task: string } | null
+): string {
+  const skillbook = loadSkillbook(cwd);
+  const recentCommits = getRecentCommitMessages(cwd, 5);
+
+  let prompt = "";
+
+  // Header
+  prompt += `# Autopilot Session ${iteration}\n\n`;
+
+  // Current task
+  if (sprintTask) {
+    prompt += `## Current Task\n`;
+    prompt += `Initiative: ${sprintTask.initiative}\n`;
+    prompt += `Feature: ${sprintTask.task}\n\n`;
+  }
+
+  // Recent progress
+  if (recentCommits.length > 0) {
+    prompt += `## Recent Commits\n`;
+    for (const msg of recentCommits) {
+      prompt += `- ${msg}\n`;
+    }
+    prompt += "\n";
+  }
+
+  // Skillbook learnings
+  if (skillbook) {
+    prompt += `## Learnings (from previous sessions)\n`;
+    prompt += skillbook + "\n\n";
+  }
+
+  // Instructions
+  prompt += `## Instructions\n`;
+  prompt += `You are running in autopilot mode. Work autonomously until:\n`;
+  prompt += `- The current feature is complete (mark it as passes: true in the sprint file)\n`;
+  prompt += `- You encounter a blocker that requires human input\n`;
+  prompt += `- Context is exhausted\n\n`;
+  prompt += `Make commits frequently. When done with current feature, move to the next one.\n`;
+  prompt += `Use /ship to check your progress.\n`;
+
+  return prompt;
+}
+
+function runClaudeSession(
+  cwd: string,
+  prompt: string,
+  options: AutopilotOptions
+): Promise<{ exitCode: number; output: string }> {
+  return new Promise((resolve) => {
+    if (options.dryRun) {
+      console.log("\n📝 Would run claude with prompt:\n");
+      console.log("---");
+      console.log(prompt.slice(0, 500) + (prompt.length > 500 ? "..." : ""));
+      console.log("---\n");
+      resolve({ exitCode: 0, output: "(dry run)" });
+      return;
+    }
+
+    console.log("\n🚀 Starting Claude session...\n");
+
+    // Write prompt to temp file
+    const promptPath = path.join(cwd, ".shiplog/current-prompt.md");
+    fs.writeFileSync(promptPath, prompt);
+
+    // Spawn claude with the prompt
+    const claude = spawn("claude", ["--print", "-p", prompt], {
+      cwd,
+      stdio: ["inherit", "pipe", "pipe"],
+      env: { ...process.env },
+    });
+
+    let output = "";
+
+    claude.stdout?.on("data", (data) => {
+      const text = data.toString();
+      output += text;
+      process.stdout.write(text);
+    });
+
+    claude.stderr?.on("data", (data) => {
+      const text = data.toString();
+      output += text;
+      process.stderr.write(text);
+    });
+
+    claude.on("close", (code) => {
+      resolve({ exitCode: code ?? 0, output });
+    });
+
+    claude.on("error", (err) => {
+      console.error(`\n❌ Failed to start claude: ${err.message}\n`);
+      resolve({ exitCode: 1, output: err.message });
+    });
+  });
+}
+
+function extractLearnings(
+  cwd: string,
+  sessionLog: SessionLog,
+  commitMessages: string[]
+): void {
+  const skillbookPath = path.join(cwd, "docs/SKILLBOOK.md");
+
+  // Initialize skillbook if it doesn't exist
+  if (!fs.existsSync(skillbookPath)) {
+    const template = `# Skillbook
+
+> Learnings accumulated across autopilot sessions. Updated automatically.
+
+## What Works
+
+<!-- Patterns that lead to successful outcomes -->
+
+## What To Avoid
+
+<!-- Patterns that caused issues -->
+
+## Patterns
+
+<!-- Common patterns observed in this codebase -->
+
+---
+
+*Last updated: ${new Date().toISOString()}*
+`;
+    fs.writeFileSync(skillbookPath, template);
+    console.log("📚 Created docs/SKILLBOOK.md");
+  }
+
+  // Analyze commits for patterns
+  const successPatterns: string[] = [];
+  const failurePatterns: string[] = [];
+
+  for (const msg of commitMessages) {
+    const lowerMsg = msg.toLowerCase();
+
+    // Detect fix commits (indicates something was wrong)
+    if (lowerMsg.includes("fix") || lowerMsg.includes("revert")) {
+      failurePatterns.push(`- Needed fix: "${msg}"`);
+    }
+
+    // Detect test-related commits (good pattern)
+    if (lowerMsg.includes("test") && !lowerMsg.includes("fix")) {
+      successPatterns.push(`- Tests added/updated: "${msg}"`);
+    }
+  }
+
+  // Only update if we have learnings
+  if (successPatterns.length > 0 || failurePatterns.length > 0) {
+    let content = fs.readFileSync(skillbookPath, "utf-8");
+
+    if (successPatterns.length > 0) {
+      const successSection = content.indexOf("## What Works");
+      if (successSection !== -1) {
+        const insertPoint =
+          content.indexOf("\n\n", successSection) + 2 ||
+          content.indexOf("\n", successSection) + 1;
+        content =
+          content.slice(0, insertPoint) +
+          successPatterns.join("\n") +
+          "\n" +
+          content.slice(insertPoint);
+      }
+    }
+
+    if (failurePatterns.length > 0) {
+      const avoidSection = content.indexOf("## What To Avoid");
+      if (avoidSection !== -1) {
+        const insertPoint =
+          content.indexOf("\n\n", avoidSection) + 2 ||
+          content.indexOf("\n", avoidSection) + 1;
+        content =
+          content.slice(0, insertPoint) +
+          failurePatterns.join("\n") +
+          "\n" +
+          content.slice(insertPoint);
+      }
+    }
+
+    // Update timestamp
+    content = content.replace(
+      /\*Last updated:.*\*/,
+      `*Last updated: ${new Date().toISOString()}*`
+    );
+
+    fs.writeFileSync(skillbookPath, content);
+    console.log(
+      `📚 Updated SKILLBOOK.md with ${successPatterns.length + failurePatterns.length} learnings`
+    );
+  }
+}
+
+export const autopilotCommand = new Command("autopilot")
+  .description(
+    "Run Claude Code in an autonomous loop with learning between sessions.\n\n" +
+      "Inspired by the ACE (Agentic Context Engine) framework.\n\n" +
+      "The loop:\n" +
+      "  1. Run Claude with current sprint task + accumulated learnings\n" +
+      "  2. When Claude exits, extract learnings from the session\n" +
+      "  3. Inject learnings into next session\n" +
+      "  4. Repeat until stall (no commits) or sprint complete\n\n" +
+      "Examples:\n" +
+      "  $ shiplog autopilot              # Run with defaults\n" +
+      "  $ shiplog autopilot --dry-run    # Preview without running\n" +
+      "  $ shiplog autopilot -n 10        # Max 10 iterations"
+  )
+  .option("-n, --max-iterations <n>", "Maximum iterations to run", "20")
+  .option(
+    "-s, --stall-threshold <n>",
+    "Iterations without commits before stopping",
+    "3"
+  )
+  .option("--dry-run", "Preview what would run without executing", false)
+  .action(async (options: AutopilotOptions) => {
+    const cwd = process.cwd();
+
+    // Parse numeric options
+    const maxIterations =
+      typeof options.maxIterations === "string"
+        ? parseInt(options.maxIterations, 10)
+        : options.maxIterations;
+    const stallThreshold =
+      typeof options.stallThreshold === "string"
+        ? parseInt(options.stallThreshold, 10)
+        : options.stallThreshold;
+
+    console.log("\n" + "=".repeat(60));
+    console.log("  🚁 Shiplog Autopilot");
+    console.log("=".repeat(60));
+
+    // Check for existing sprint
+    const sprintTask = getCurrentSprintTask(cwd);
+    if (!sprintTask) {
+      console.log("\n❌ No active sprint found.\n");
+      console.log("   Create a sprint first:");
+      console.log("   1. Run 'claude' and use /ship to plan a new initiative");
+      console.log("   2. Then run 'shiplog autopilot' to work on it\n");
+      process.exit(1);
+    }
+
+    console.log(`\n📋 Initiative: ${sprintTask.initiative}`);
+    console.log(`📌 Current task: ${sprintTask.task}`);
+    console.log(`🔄 Max iterations: ${maxIterations}`);
+    console.log(`⏸️  Stall threshold: ${stallThreshold} iterations`);
+
+    if (options.dryRun) {
+      console.log(`\n🧪 DRY RUN MODE - No actual execution\n`);
+    }
+
+    // Ensure .shiplog directory exists
+    ensureShiplogDir(cwd);
+
+    // Initialize or load state
+    let state: AutopilotState = loadState(cwd) || {
+      initiative: sprintTask.initiative,
+      started: new Date().toISOString(),
+      iterations: 0,
+      totalCommits: 0,
+      stallCount: 0,
+      sessions: [],
+      status: "running",
+    };
+
+    // Main loop
+    let iteration = state.iterations;
+    let stallCount = state.stallCount;
+
+    while (iteration < maxIterations) {
+      iteration++;
+
+      console.log("\n" + "-".repeat(60));
+      console.log(`  SESSION ${iteration}/${maxIterations}`);
+      console.log("-".repeat(60));
+
+      const startCommits = getCommitCount(cwd);
+
+      // Create session log
+      const sessionLog: SessionLog = {
+        sessionId: `session-${Date.now()}`,
+        iteration,
+        startTime: new Date().toISOString(),
+        startCommits,
+        status: "running",
+      };
+      state.sessions.push(sessionLog);
+      state.iterations = iteration;
+
+      // Generate prompt with learnings
+      const prompt = generateContinuationPrompt(cwd, iteration, sprintTask);
+
+      // Run Claude session
+      const { exitCode } = await runClaudeSession(cwd, prompt, {
+        ...options,
+        maxIterations,
+        stallThreshold,
+      });
+
+      // Update session log
+      const endCommits = getCommitCount(cwd);
+      const commitsMade = endCommits - startCommits;
+
+      sessionLog.endTime = new Date().toISOString();
+      sessionLog.endCommits = endCommits;
+      sessionLog.commitsMade = commitsMade;
+      sessionLog.exitCode = exitCode;
+      sessionLog.status = "completed";
+
+      state.totalCommits += commitsMade;
+
+      console.log(`\n📊 Session ${iteration} Results:`);
+      console.log(`   Commits made: ${commitsMade}`);
+      console.log(`   Total commits: ${state.totalCommits}`);
+
+      // Extract learnings
+      const recentCommits = getRecentCommitMessages(cwd, commitsMade || 5);
+      extractLearnings(cwd, sessionLog, recentCommits);
+
+      // Save state
+      saveState(cwd, state);
+
+      // Check for stall
+      if (commitsMade === 0) {
+        stallCount++;
+        console.log(`\n⚠️  No commits this session (${stallCount}/${stallThreshold})`);
+
+        if (stallCount >= stallThreshold) {
+          console.log("\n🛑 STALLED - No progress for multiple iterations.\n");
+          state.status = "stalled";
+          saveState(cwd, state);
+          break;
+        }
+      } else {
+        stallCount = 0; // Reset on progress
+      }
+
+      state.stallCount = stallCount;
+
+      // Check if sprint is complete
+      const currentTask = getCurrentSprintTask(cwd);
+      if (!currentTask) {
+        console.log("\n🎉 Sprint complete! All features pass.\n");
+        state.status = "completed";
+        saveState(cwd, state);
+        break;
+      }
+
+      // Small delay before next iteration
+      if (!options.dryRun && iteration < maxIterations) {
+        console.log("\n⏳ Starting next iteration in 3 seconds...");
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+
+    // Final summary
+    console.log("\n" + "=".repeat(60));
+    console.log("  AUTOPILOT SUMMARY");
+    console.log("=".repeat(60));
+    console.log(`\nInitiative: ${sprintTask.initiative}`);
+    console.log(`Sessions: ${state.sessions.length}`);
+    console.log(`Total commits: ${state.totalCommits}`);
+    console.log(`Status: ${state.status}`);
+    console.log(`\nSession logs: .shiplog/autopilot-state.json\n`);
+
+    if (state.status === "stalled") {
+      process.exit(1);
+    }
+  });

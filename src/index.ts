@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { initCommand } from "./commands/init.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { autopilotCommand } from "./commands/autopilot.js";
 
 const program = new Command();
 
@@ -17,10 +18,11 @@ program
       "Also: /ship design (creative work), /status (health check)\n\n" +
       "Learn more: https://github.com/danielgwilson/shiplog"
   )
-  .version("1.1.4");
+  .version("1.2.0");
 
 program.addCommand(initCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(doctorCommand);
+program.addCommand(autopilotCommand);
 
 program.parse();
