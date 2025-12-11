@@ -192,43 +192,36 @@ function runClaudeSession(
   prompt: string,
   options: AutopilotOptions
 ): Promise<{ exitCode: number; output: string }> {
-  return new Promise((resolve) => {
-    if (options.dryRun) {
-      console.log("\n📝 Would run claude with prompt:\n");
-      console.log("---");
-      console.log(prompt.slice(0, 500) + (prompt.length > 500 ? "..." : ""));
-      console.log("---\n");
-      resolve({ exitCode: 0, output: "(dry run)" });
-      return;
-    }
+  if (options.dryRun) {
+    console.log("\n📝 Would run claude with prompt:\n");
+    console.log("---");
+    console.log(prompt.slice(0, 500) + (prompt.length > 500 ? "..." : ""));
+    console.log("---\n");
+    return Promise.resolve({ exitCode: 0, output: "(dry run)" });
+  }
 
-    console.log("\n🚀 Starting Claude session...\n");
+  console.log("\n🚀 Starting Claude session...\n");
 
-    // Write prompt to temp file
-    const promptPath = path.join(cwd, ".shiplog/current-prompt.md");
-    fs.writeFileSync(promptPath, prompt);
+  // Save prompt for reference
+  const promptPath = path.join(cwd, ".shiplog/current-prompt.md");
+  fs.writeFileSync(promptPath, prompt);
 
-    // Use shell to pipe the prompt file to claude --print
-    // This is more reliable than spawn with stdin pipe
-    const shellCmd = `cat "${promptPath}" | claude --print`;
-    console.log(`📝 Prompt length: ${prompt.length} chars`);
+  // Use spawnSync with stdin pipe (like ACE framework does with subprocess.run)
+  // Pass prompt via stdin, let stdout/stderr go directly to terminal
+  const { spawnSync } = require("child_process");
 
-    const shell = spawn("sh", ["-c", shellCmd], {
-      cwd,
-      stdio: "inherit", // All streams inherit from parent (terminal)
-      env: { ...process.env },
-    });
-
-    shell.on("close", (code) => {
-      console.log(`\n✅ Claude session ended (exit code: ${code})`);
-      resolve({ exitCode: code ?? 0, output: "" });
-    });
-
-    shell.on("error", (err) => {
-      console.error(`\n❌ Failed to start claude: ${err.message}\n`);
-      resolve({ exitCode: 1, output: err.message });
-    });
+  const result = spawnSync("claude", ["--print"], {
+    cwd,
+    input: prompt,         // Pass prompt via stdin (like ACE's input=prompt)
+    encoding: "utf-8",
+    stdio: ["pipe", "inherit", "inherit"],  // stdin=pipe, stdout/stderr=terminal
+    env: { ...process.env },
+    maxBuffer: 50 * 1024 * 1024,  // 50MB buffer
   });
+
+  const exitCode = result.status ?? 0;
+  console.log(`\n✅ Claude session ended (exit code: ${exitCode})`);
+  return Promise.resolve({ exitCode, output: "" });
 }
 
 function extractLearnings(
