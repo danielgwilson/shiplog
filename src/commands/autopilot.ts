@@ -208,14 +208,16 @@ function runClaudeSession(
     const promptPath = path.join(cwd, ".shiplog/current-prompt.md");
     fs.writeFileSync(promptPath, prompt);
 
-    // Spawn claude with the prompt
-    // Note: prompt is a positional argument, NOT a -p flag (-p means --print)
-    // Use stdio: "inherit" so output streams directly to terminal (no buffering issues)
-    const claude = spawn("claude", ["--print", prompt], {
+    // Spawn claude with prompt via stdin (avoids command-line length/escaping issues)
+    const claude = spawn("claude", ["--print"], {
       cwd,
-      stdio: "inherit",
+      stdio: ["pipe", "inherit", "inherit"],
       env: { ...process.env },
     });
+
+    // Write prompt to stdin and close it
+    claude.stdin?.write(prompt);
+    claude.stdin?.end();
 
     claude.on("close", (code) => {
       resolve({ exitCode: code ?? 0, output: "" });
