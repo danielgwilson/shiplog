@@ -1,0 +1,141 @@
+{
+  "initiative": "Upgrade Autopilot to use Anthropic Agent SDK",
+  "created": "2025-12-11",
+  "status": "in_progress",
+  "context": {
+    "why": "The current autopilot spawns `claude` CLI and parses stream-json output - a fragile approach we just spent hours debugging. The Agent SDK provides native TypeScript APIs for streaming, sessions, permissions, and hooks - eliminating all the CLI gymnastics.",
+    "recommendation": "Use V2 Preview API (unstable_v2_*) - it's dramatically simpler with send()/receive() pattern instead of async generator coordination. The 'unstable' prefix is about API stability, not reliability. Missing features (forking) aren't needed for autopilot.",
+    "sdk_package": "@anthropic-ai/claude-agent-sdk",
+    "docs": {
+      "v1": "https://platform.claude.com/docs/en/agent-sdk/typescript",
+      "v2_preview": "https://platform.claude.com/docs/en/agent-sdk/typescript-v2-preview",
+      "permissions": "https://platform.claude.com/docs/en/agent-sdk/permissions",
+      "sessions": "https://platform.claude.com/docs/en/agent-sdk/sessions"
+    }
+  },
+  "features": [
+    {
+      "id": "sdk-001",
+      "description": "Install Agent SDK and set up basic V2 session",
+      "steps": [
+        "Add @anthropic-ai/claude-agent-sdk to dependencies",
+        "Create minimal test: unstable_v2_createSession(), send(), receive()",
+        "Verify streaming output works natively (no JSON parsing needed)",
+        "Confirm TypeScript 5.2+ for 'await using' syntax"
+      ],
+      "passes": false,
+      "notes": "V2 uses send()/receive() pattern - much simpler than V1 async generators"
+    },
+    {
+      "id": "sdk-002",
+      "description": "Replace CLI spawn with SDK session in autopilot",
+      "steps": [
+        "Replace spawn('claude', [...]) with unstable_v2_createSession()",
+        "Convert prompt injection to session.send(prompt)",
+        "Replace stream-json parsing with native session.receive() iteration",
+        "Handle assistant messages: msg.type === 'assistant' with msg.message.content"
+      ],
+      "passes": false,
+      "notes": "This eliminates ~100 lines of stream parsing code we just debugged"
+    },
+    {
+      "id": "sdk-003",
+      "description": "Implement native session resume",
+      "steps": [
+        "Capture session.session_id from init message (or Session interface)",
+        "Store session ID in autopilot state instead of spawning fresh each time",
+        "Use unstable_v2_resumeSession(sessionId, options) to continue sessions",
+        "Handle session expiry gracefully (create new if resume fails)"
+      ],
+      "passes": false,
+      "notes": "SDK handles session persistence - we just store the ID"
+    },
+    {
+      "id": "sdk-004",
+      "description": "Add permission handling with canUseTool callback",
+      "steps": [
+        "Add permissionMode option: 'default' for interactive, 'acceptEdits' for auto-approve",
+        "Implement canUseTool callback for custom permission logic",
+        "Allow read-only tools (Read, Grep, Glob) automatically",
+        "Require confirmation for destructive bash commands",
+        "Surface permission prompts in autopilot output"
+      ],
+      "passes": false,
+      "notes": "Example: canUseTool: async (toolName, input) => { return { behavior: 'allow' } }"
+    },
+    {
+      "id": "sdk-005",
+      "description": "Configure system prompt with CLAUDE.md integration",
+      "steps": [
+        "Use systemPrompt option with autopilot-specific instructions",
+        "Set settingSources: ['project'] to load CLAUDE.md automatically",
+        "Append autopilot context (current task, learnings) via systemPrompt.append",
+        "Test that Claude picks up project instructions"
+      ],
+      "passes": false,
+      "notes": "systemPrompt: { preset: 'claude_code', append: 'Autopilot mode...' }"
+    },
+    {
+      "id": "sdk-006",
+      "description": "Handle streaming output types properly",
+      "steps": [
+        "Handle 'assistant' messages (extract text from content blocks)",
+        "Handle 'tool_call' messages (show tool usage like Claude Code does)",
+        "Handle 'tool_result' messages (show results, abridged for large outputs)",
+        "Handle 'error' messages gracefully",
+        "Handle 'system' messages (init, completion)"
+      ],
+      "passes": false,
+      "notes": "Goal: output similar to Claude Code's native display"
+    },
+    {
+      "id": "sdk-007",
+      "description": "Add budget controls and cost tracking",
+      "steps": [
+        "Add --max-budget option to autopilot command",
+        "Pass maxBudgetUsd to SDK options",
+        "Track cost from system messages with message.cost",
+        "Handle budget_exceeded errors gracefully",
+        "Show cost summary at end of session"
+      ],
+      "passes": false,
+      "notes": "SDK has native budget support: maxBudgetUsd: 5.0"
+    },
+    {
+      "id": "sdk-008",
+      "description": "Clean up legacy CLI code",
+      "steps": [
+        "Remove spawn/child_process usage for Claude",
+        "Remove stream-json parsing code",
+        "Remove manual stdin/stdout handling",
+        "Update timeout handling to use SDK patterns",
+        "Update interrupt handling for SDK sessions"
+      ],
+      "passes": false,
+      "notes": "Should significantly reduce autopilot.ts complexity"
+    }
+  ],
+  "migration_notes": {
+    "v2_api_summary": {
+      "createSession": "unstable_v2_createSession({ model: 'claude-sonnet-4-5-20250929' })",
+      "resumeSession": "unstable_v2_resumeSession(sessionId, { model: '...' })",
+      "oneShot": "unstable_v2_prompt('question', { model: '...' })",
+      "send": "await session.send('message')",
+      "receive": "for await (const msg of session.receive()) { ... }",
+      "cleanup": "session.close() or 'await using session = ...' (TS 5.2+)"
+    },
+    "message_types": {
+      "assistant": "Claude's response - msg.message.content array of text/tool_use blocks",
+      "tool_call": "Tool being executed - msg.tool_name, msg.input",
+      "tool_result": "Tool result - msg.tool_name, msg.result",
+      "error": "Error occurred - msg.error with .type and .message",
+      "system": "System events - msg.subtype: 'init' (session_id) or 'completion'"
+    },
+    "breaking_changes": [
+      "No more CLI spawning - direct SDK calls",
+      "No more stream-json parsing - native async iteration",
+      "Session management via SDK instead of manual state files",
+      "Permission handling via callback instead of relying on CLI prompts"
+    ]
+  }
+}

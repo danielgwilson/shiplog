@@ -33,7 +33,9 @@
 
 ## In Progress
 
-<!-- Tasks currently being worked on - autopilot ready to self-improve! -->
+| Task | Started | Notes |
+|------|---------|-------|
+| **Agent SDK Upgrade** | 2025-12-11 | Replace CLI spawning with native SDK - 8 features in sprint |
 
 ---
 
