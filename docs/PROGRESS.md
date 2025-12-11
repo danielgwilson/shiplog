@@ -23,6 +23,7 @@
 | New README | 2025-12-08 | Badges, driver's seat philosophy, socials |
 | Configure GitHub repo | 2025-12-08 | Description, topics, issues enabled |
 | Make repo public | 2025-12-08 | github.com/danielgwilson/shiplog |
+| **Fix hook matcher format** | 2025-12-10 | Changed `{}` to `""` - Claude Code requires string |
 
 ---
 

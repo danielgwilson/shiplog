@@ -2,59 +2,45 @@
 
 > Capture current session state so the next session can pick up seamlessly.
 
-**Last Updated:** 2025-12-08
-**Status:** PUBLISHED & PUBLIC
+**Last Updated:** 2025-12-10
+**Status:** v1.1.3 ready to publish
 
 ---
 
 ## What Was Done This Session
 
-### Published to npm
-- Ran pre-publish security audit (no secrets, clean package)
-- Added LICENSE file (MIT)
-- Fixed executable permission on dist/index.js
-- Published v1.1.0 → v1.1.1 (author name) → v1.1.2 (new README)
-- Package live at: https://www.npmjs.com/package/shiplog
+### Fixed hook matcher format (CRITICAL BUG)
+- Claude Code requires `matcher` to be a **string**, not an object
+- We were generating `"matcher": {}` which caused validation errors
+- Fixed to `"matcher": ""` (empty string = match all)
+- Updated tests to check `typeof matcher === 'string'` (not just existence)
 
-### Cleaned up for public release
-- Moved conversation logs to `.local/` (gitignored)
-- Scrubbed git history with `git-filter-repo`
-- Force pushed clean history
-
-### New README
-- Added badges (npm version, downloads, CI, license)
-- Emphasized "driver's seat" philosophy as unique value prop
-- Added author socials (X, LinkedIn, GitHub)
-- Cleaner structure, punchier copy
-
-### GitHub repo configured
-- Description and topics set via `gh repo edit`
-- Issues enabled
-- Made repository PUBLIC
+Files changed:
+- `src/commands/init.ts`
+- `src/commands/upgrade.ts`
+- `src/__tests__/e2e.test.ts`
 
 ---
 
 ## Current State
 
-- **npm:** v1.1.2 published and live
-- **GitHub:** Public at github.com/danielgwilson/shiplog
-- **Git:** Clean
+- **Version:** 1.1.3 (bumped, not yet published)
+- **Git:** Committed, ready to push
 - **Tests:** 23 passing
-- **CI:** Green
+- **CI:** Should pass (just string change)
 
 ---
 
 ## What's Next
 
-1. Share / promote (tweet, post, get feedback)
-2. Add more test coverage if needed
-3. Iterate based on user feedback
+1. Publish v1.1.3 to npm
+2. Existing users with broken settings need to re-run `shiplog init --force` or manually fix
 
 ---
 
 ## Open Questions for Human
 
-None - shiplog is published and public! 🚢
+Do you want me to publish v1.1.3 to npm now?
 
 ---
 

@@ -4,6 +4,26 @@
 
 ---
 
+## 2025-12-10: Fix hook matcher format (must be string, not object)
+
+**Decision:** Changed `"matcher": {}` to `"matcher": ""` in settings.local.json generation.
+
+**Context:** Claude Code v2.0.64 validates that the `matcher` field in hooks must be a string. We were generating an empty object `{}` which caused validation errors:
+```
+matcher: Expected string, but received object
+```
+
+**The Bug:**
+- Previous code: `"matcher": {}`
+- Fixed code: `"matcher": ""`
+
+**Why the test didn't catch it:**
+The original test only checked `expect(settings.hooks.SessionStart[0].matcher).toBeDefined()` which passes for both `{}` and `""`. Fixed the test to check `typeof ... === 'string'`.
+
+**Owner:** Claude
+
+---
+
 ## 2025-12-07: Initialize Shiplog
 
 **Decision:** Set up shiplog infrastructure for long-running sessions.
