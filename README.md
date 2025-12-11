@@ -144,6 +144,192 @@ Your content is preserved. Only templates are updated.
 
 ---
 
+## Autopilot Mode
+
+> **The dream: Walk away. Come back to finished work.**
+
+Autopilot runs Claude in a loop. Each session works on your sprint until context fills up. Then it extracts learnings, restarts Claude with fresh context + accumulated knowledge, and continues. Repeat until done.
+
+```bash
+shiplog autopilot
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  1. START    → Claude reads sprint, picks next feature, works on it │
+│  2. WORK     → Claude commits frequently, updates sprint progress   │
+│  3. EXIT     → Context fills up or feature done, Claude exits       │
+│  4. LEARN    → Autopilot extracts learnings from commit history     │
+│  5. RESTART  → Fresh Claude session with learnings injected         │
+│  6. REPEAT   → Until sprint complete or stall detected              │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### The Key Insight
+
+Claude doesn't run infinitely in ONE session. It runs **multiple sessions with learning injected between them**.
+
+Each session:
+- Gets the current sprint context (what's done, what's next)
+- Gets accumulated learnings from previous sessions (what worked, what failed)
+- Works autonomously until context is exhausted
+- Exits cleanly, letting autopilot extract new learnings
+
+This is inspired by the [ACE (Agentic Context Engine) framework](https://github.com/kayba-ai/agentic-context-engine) which achieved 119 commits over 4 hours on a single initiative.
+
+### What You'll See
+
+```
+============================================================
+  🚁 Shiplog Autopilot
+============================================================
+
+📋 Initiative: Add user authentication
+📌 Current task: Implement login form validation
+🔄 Max iterations: 20
+⏸️  Stall threshold: 3 iterations
+
+------------------------------------------------------------
+  SESSION 1/20
+------------------------------------------------------------
+🚀 Starting Claude session...
+
+[Claude's output appears here — you can watch or walk away]
+
+📊 Session 1 Results:
+   Commits made: 7
+   Total commits: 7
+📚 Updated SKILLBOOK.md with 2 learnings
+
+⏳ Starting next iteration in 3 seconds...
+
+------------------------------------------------------------
+  SESSION 2/20
+------------------------------------------------------------
+...
+```
+
+### Safety & Guardrails
+
+| Guardrail | What It Does |
+|-----------|--------------|
+| **Stall Detection** | Stops if no commits for N sessions (default: 3) |
+| **Max Iterations** | Hard limit on total sessions (default: 20) |
+| **Git-Based Progress** | Only real commits count — no fake progress |
+| **Interruptible** | Ctrl+C stops cleanly, state is saved |
+| **Dry-Run Mode** | Preview everything without running Claude |
+
+### Prerequisites
+
+1. **Active sprint** — Create one with `/ship "your feature"` first
+2. **Incomplete features** — At least one feature with `passes: false`
+3. **Git repository** — Commits are how progress is measured
+
+### Files Created
+
+```
+.shiplog/                      # Session data (gitignored automatically)
+├── autopilot-state.json       # Current run state
+├── sessions/                  # Individual session logs
+└── current-prompt.md          # Last prompt sent to Claude
+
+docs/SKILLBOOK.md              # Accumulated learnings (persists across runs)
+```
+
+### The Skillbook
+
+As autopilot runs, it builds a **skillbook** — a living document of what works and what doesn't in your codebase:
+
+```markdown
+# Skillbook
+
+## What Works
+- Tests added/updated: "add validation tests for login form"
+- Tests added/updated: "add e2e tests for auth flow"
+
+## What To Avoid
+- Needed fix: "fix: handle null user in session check"
+- Needed fix: "fix: missing await on async validation"
+```
+
+This gets injected into every new session, so Claude learns from past mistakes without you having to explain them.
+
+### Usage Examples
+
+```bash
+# Start with sensible defaults (20 iterations, 3 stall threshold)
+shiplog autopilot
+
+# Preview what would happen without running Claude
+shiplog autopilot --dry-run
+
+# Allow up to 50 sessions (for big initiatives)
+shiplog autopilot -n 50
+
+# More patience before stall detection (5 sessions without commits)
+shiplog autopilot -s 5
+
+# Quick run, fail fast on stalls
+shiplog autopilot -n 10 -s 2
+```
+
+### Typical Workflow
+
+```bash
+# 1. Create a sprint in Claude
+claude
+> /ship "Add payment processing"
+# Claude creates sprint file, you approve
+
+# 2. Exit Claude, start autopilot
+exit
+shiplog autopilot
+
+# 3. Walk away. Check back later.
+# Autopilot shows progress, commits pile up.
+
+# 4. Sprint completes or stalls
+# Review the work, merge to main, start next sprint
+```
+
+### When It Stops
+
+Autopilot stops when:
+
+| Condition | What Happens |
+|-----------|--------------|
+| **Sprint Complete** | All features have `passes: true` |
+| **Stall Detected** | N sessions with no commits |
+| **Max Iterations** | Hit the `-n` limit |
+| **Ctrl+C** | Manual interruption (state saved) |
+| **Error** | Claude fails to start |
+
+### FAQ
+
+**Q: What if Claude goes off the rails?**
+
+A: Stall detection catches this. If Claude stops making commits (real progress), autopilot stops. You can also Ctrl+C anytime.
+
+**Q: Does it push to git?**
+
+A: No. Claude commits locally. You review and push when ready.
+
+**Q: Can I resume after stopping?**
+
+A: Yes. State is saved in `.shiplog/autopilot-state.json`. Just run `shiplog autopilot` again.
+
+**Q: How is this different from ACE?**
+
+A: ACE requires Python and external API calls for the learning loop. Shiplog autopilot is pure Node.js, simpler, and integrated with the shiplog sprint system. Same core idea, lighter implementation.
+
+**Q: What if I don't have a sprint?**
+
+A: Autopilot requires a sprint. Run `claude` and use `/ship "your feature"` to create one first.
+
+---
+
 ## CLI Reference
 
 ```bash
@@ -156,6 +342,15 @@ npx shiplog init --force          # Overwrite existing
 # Upgrade existing v1 project to v2
 npx shiplog upgrade
 npx shiplog upgrade --force       # Re-apply even if already v2
+
+# Run autonomous loop (see Autopilot Mode above)
+shiplog autopilot
+shiplog autopilot --dry-run       # Preview without running
+shiplog autopilot -n 50 -s 5      # Custom iterations/threshold
+
+# Check installation health
+shiplog doctor
+shiplog doctor --fix              # Auto-fix issues
 ```
 
 ---

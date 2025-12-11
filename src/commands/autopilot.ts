@@ -338,25 +338,90 @@ function extractLearnings(
 
 export const autopilotCommand = new Command("autopilot")
   .description(
-    "Run Claude Code in an autonomous loop with learning between sessions.\n\n" +
-      "Inspired by the ACE (Agentic Context Engine) framework.\n\n" +
-      "The loop:\n" +
-      "  1. Run Claude with current sprint task + accumulated learnings\n" +
-      "  2. When Claude exits, extract learnings from the session\n" +
-      "  3. Inject learnings into next session\n" +
-      "  4. Repeat until stall (no commits) or sprint complete\n\n" +
-      "Examples:\n" +
-      "  $ shiplog autopilot              # Run with defaults\n" +
-      "  $ shiplog autopilot --dry-run    # Preview without running\n" +
-      "  $ shiplog autopilot -n 10        # Max 10 iterations"
+    `Let Claude drive your project autonomously for hours.
+
+WHAT IT DOES
+  Runs Claude Code in a loop. Each session works on your sprint until context
+  fills up. Then autopilot extracts learnings, restarts Claude with fresh
+  context + accumulated knowledge, and continues. Walk away. Come back to
+  finished work.
+
+THE LOOP
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  1. START    → Claude reads sprint, picks next feature, works on it │
+  │  2. WORK     → Claude commits frequently, updates sprint progress   │
+  │  3. EXIT     → Context fills up, Claude exits naturally             │
+  │  4. LEARN    → Autopilot extracts learnings from commits            │
+  │  5. RESTART  → Fresh Claude session with learnings injected         │
+  │  6. REPEAT   → Until sprint complete or stall detected              │
+  └─────────────────────────────────────────────────────────────────────┘
+
+WHAT YOU'LL SEE
+  ============================================================
+    🚁 Shiplog Autopilot
+  ============================================================
+
+  📋 Initiative: Add user authentication
+  📌 Current task: Implement login form
+  🔄 Max iterations: 20
+  ⏸️  Stall threshold: 3 iterations
+
+  ------------------------------------------------------------
+    SESSION 1/20
+  ------------------------------------------------------------
+  🚀 Starting Claude session...
+
+  [Claude works here - you'll see its output]
+
+  📊 Session 1 Results:
+     Commits made: 7
+     Total commits: 7
+  📚 Updated SKILLBOOK.md with 2 learnings
+
+  ⏳ Starting next iteration in 3 seconds...
+
+SAFETY & GUARDRAILS
+  • Stall detection   - Stops if no commits for N sessions (default: 3)
+  • Max iterations    - Hard limit on sessions (default: 20)
+  • Git-based         - Only counts real commits as progress
+  • Interruptible     - Ctrl+C stops cleanly, state is saved
+  • Dry-run mode      - Preview everything without running Claude
+
+PREREQUISITES
+  1. Active sprint file in docs/sprints/ with status: "in_progress"
+  2. At least one feature with passes: false
+  3. Git repository (commits are how progress is measured)
+
+  No sprint? Run 'claude' first and use /ship to create one.
+
+FILES CREATED
+  .shiplog/                    - Session data directory (gitignored)
+  .shiplog/autopilot-state.json - Current run state (resume support)
+  .shiplog/sessions/           - Individual session logs
+  docs/SKILLBOOK.md            - Accumulated learnings (persists)
+
+EXAMPLES
+  $ shiplog autopilot              # Start with sensible defaults
+  $ shiplog autopilot --dry-run    # See what would happen, don't run
+  $ shiplog autopilot -n 50        # Allow up to 50 sessions
+  $ shiplog autopilot -s 5         # More patience before stall detection
+  $ shiplog autopilot -n 10 -s 2   # Quick run, fail fast on stalls`
   )
-  .option("-n, --max-iterations <n>", "Maximum iterations to run", "20")
+  .option(
+    "-n, --max-iterations <n>",
+    "Max Claude sessions before stopping (default: 20)",
+    "20"
+  )
   .option(
     "-s, --stall-threshold <n>",
-    "Iterations without commits before stopping",
+    "Sessions without commits before declaring stall (default: 3)",
     "3"
   )
-  .option("--dry-run", "Preview what would run without executing", false)
+  .option(
+    "--dry-run",
+    "Preview the prompt and settings without running Claude",
+    false
+  )
   .action(async (options: AutopilotOptions) => {
     const cwd = process.cwd();
 
