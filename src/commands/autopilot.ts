@@ -24,6 +24,8 @@ interface SessionLog {
   startCommits: number;
   endCommits?: number;
   commitsMade?: number;
+  filesChanged?: number;
+  sprintUpdated?: boolean;
   exitCode?: number;
   timedOut?: boolean;
   status: "running" | "completed" | "stalled" | "error" | "timeout";
@@ -100,6 +102,36 @@ function getRecentCommitMessages(cwd: string, count: number): string[] {
     return result.trim().split("\n").filter(Boolean);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Detect uncommitted file changes as "soft progress"
+ * Returns number of files with changes (staged or unstaged)
+ */
+function getFileChanges(cwd: string): {
+  changedFiles: number;
+  sprintFileModified: boolean;
+  changedPaths: string[];
+} {
+  try {
+    // Get list of modified files (staged and unstaged)
+    const result = execSync("git diff --name-only HEAD", {
+      cwd,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const changedPaths = result.trim().split("\n").filter(Boolean);
+    const changedFiles = changedPaths.length;
+
+    // Check if any sprint file was modified
+    const sprintFileModified = changedPaths.some(p =>
+      p.startsWith("docs/sprints/") && p.endsWith(".json")
+    );
+
+    return { changedFiles, sprintFileModified, changedPaths };
+  } catch {
+    return { changedFiles: 0, sprintFileModified: false, changedPaths: [] };
   }
 }
 
@@ -593,9 +625,14 @@ EXAMPLES
       const endCommits = getCommitCount(cwd);
       const commitsMade = endCommits - startCommits;
 
+      // Check for file changes (soft progress)
+      const { changedFiles, sprintFileModified } = getFileChanges(cwd);
+
       sessionLog.endTime = new Date().toISOString();
       sessionLog.endCommits = endCommits;
       sessionLog.commitsMade = commitsMade;
+      sessionLog.filesChanged = changedFiles;
+      sessionLog.sprintUpdated = sprintFileModified;
       sessionLog.exitCode = exitCode;
       sessionLog.timedOut = timedOut;
       sessionLog.status = timedOut ? "timeout" : "completed";
@@ -604,6 +641,7 @@ EXAMPLES
 
       console.log(`\n📊 Session ${iteration} Results:`);
       console.log(`   Commits made: ${commitsMade}`);
+      console.log(`   Files changed: ${changedFiles}${sprintFileModified ? " (sprint updated)" : ""}`);
       console.log(`   Total commits: ${state.totalCommits}`);
 
       // Extract learnings
@@ -613,10 +651,23 @@ EXAMPLES
       // Save state
       saveState(cwd, state);
 
-      // Check for stall
-      if (commitsMade === 0) {
+      // Check for stall using improved progress detection
+      // - Commits = hard progress (reset stall)
+      // - File changes = soft progress (don't increment stall)
+      // - No changes = increment stall
+      if (commitsMade > 0) {
+        stallCount = 0; // Hard progress: reset stall counter
+        console.log(`\n✅ Progress made: ${commitsMade} commit(s)`);
+      } else if (changedFiles > 0) {
+        // Soft progress: don't increment stall counter
+        console.log(`\n📝 Soft progress: ${changedFiles} file(s) changed (not committed)`);
+        if (sprintFileModified) {
+          console.log(`   Sprint file updated - work in progress`);
+        }
+      } else {
+        // No progress at all
         stallCount++;
-        console.log(`\n⚠️  No commits this session (${stallCount}/${stallThreshold})`);
+        console.log(`\n⚠️  No progress this session (${stallCount}/${stallThreshold})`);
 
         if (stallCount >= stallThreshold) {
           console.log("\n🛑 STALLED - No progress for multiple iterations.\n");
@@ -624,8 +675,6 @@ EXAMPLES
           saveState(cwd, state);
           break;
         }
-      } else {
-        stallCount = 0; // Reset on progress
       }
 
       state.stallCount = stallCount;
