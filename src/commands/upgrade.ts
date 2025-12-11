@@ -172,7 +172,7 @@ export const upgradeCommand = new Command("upgrade")
           existingSettings.hooks = {
             SessionStart: [
               {
-                matcher: {},
+                matcher: "",
                 hooks: [
                   {
                     type: "command",
@@ -183,7 +183,7 @@ export const upgradeCommand = new Command("upgrade")
             ],
             SessionEnd: [
               {
-                matcher: {},
+                matcher: "",
                 hooks: [
                   {
                     type: "command",

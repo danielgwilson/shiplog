@@ -809,7 +809,7 @@ function getSETTINGSjson(): string {
   "hooks": {
     "SessionStart": [
       {
-        "matcher": {},
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -820,7 +820,7 @@ function getSETTINGSjson(): string {
     ],
     "SessionEnd": [
       {
-        "matcher": {},
+        "matcher": "",
         "hooks": [
           {
             "type": "command",

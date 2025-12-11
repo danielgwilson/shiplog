@@ -268,7 +268,9 @@ describe('settings.local.json format', () => {
 
     // Check SessionStart format
     expect(Array.isArray(settings.hooks.SessionStart)).toBe(true);
-    expect(settings.hooks.SessionStart[0].matcher).toBeDefined();
+    // CRITICAL: matcher MUST be a string, not an object
+    // Claude Code validates this and will reject object matchers
+    expect(typeof settings.hooks.SessionStart[0].matcher).toBe('string');
     expect(settings.hooks.SessionStart[0].hooks).toBeDefined();
     expect(Array.isArray(settings.hooks.SessionStart[0].hooks)).toBe(true);
     expect(settings.hooks.SessionStart[0].hooks[0].type).toBe('command');
@@ -276,7 +278,8 @@ describe('settings.local.json format', () => {
 
     // Check SessionEnd format
     expect(Array.isArray(settings.hooks.SessionEnd)).toBe(true);
-    expect(settings.hooks.SessionEnd[0].matcher).toBeDefined();
+    // CRITICAL: matcher MUST be a string, not an object
+    expect(typeof settings.hooks.SessionEnd[0].matcher).toBe('string');
     expect(settings.hooks.SessionEnd[0].hooks).toBeDefined();
     expect(Array.isArray(settings.hooks.SessionEnd[0].hooks)).toBe(true);
     expect(settings.hooks.SessionEnd[0].hooks[0].type).toBe('command');
