@@ -27,12 +27,13 @@
 | **Add doctor command** | 2025-12-11 | v1.1.4 - validates installation health, auto-fixes issues |
 | **Autopilot Mode** | 2025-12-11 | v1.2.0 - outer loop for truly autonomous sessions (ACE-inspired) |
 | **Autopilot Robustness** | 2025-12-11 | Graceful Ctrl+C, timeout, progress detection, retry logic, resume |
+| **Streaming Output** | 2025-12-11 | v1.2.1 - Real-time streaming via stream-json format |
 
 ---
 
 ## In Progress
 
-<!-- Tasks currently being worked on -->
+<!-- Tasks currently being worked on - autopilot ready to self-improve! -->
 
 ---
 
@@ -60,5 +61,5 @@
 - v1.1.3: Hook matcher fix (string not object)
 - v1.1.4: Doctor command for health validation
 - v1.2.0: Autopilot mode - outer loop for autonomous sessions (ACE-inspired)
-- v1.2.1: Autopilot robustness - Ctrl+C handling, timeout, progress detection, retry, resume
+- v1.2.1: Real-time streaming output - see Claude's thinking as it happens
 - Repo is now PUBLIC

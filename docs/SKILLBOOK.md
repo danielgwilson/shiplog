@@ -4,88 +4,25 @@
 
 ## What Works
 
-<!-- Patterns that lead to successful outcomes -->
+- **Streaming JSON for real-time output**: Use `claude -p --verbose --output-format stream-json --include-partial-messages` to get chunked output instead of buffered
+- **Parsing stream events**: Look for `event.type === "stream_event"` then `event.event.type === "content_block_delta"` with `event.event.delta.text`
+- **Graceful interrupt handling**: SIGINT handler can save state before exit
+- **Exponential backoff on retries**: 5s, 10s, 20s... gives Claude time to recover
+- **Track file changes as soft progress**: `git diff --name-only HEAD` shows work even without commits
 
 ## What To Avoid
 
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: use async spawn for real-time Claude output streaming"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: correct Claude CLI invocation in autopilot"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: correct Claude CLI invocation in autopilot"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: correct Claude CLI invocation in autopilot"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: correct Claude CLI invocation in autopilot"
-- Needed fix: "fix: use spawnSync with input param like ACE framework"
-- Needed fix: "fix: use shell pipe for reliable Claude stdin in autopilot"
-- Needed fix: "fix: pass prompt via stdin to avoid arg length/escaping issues"
-- Needed fix: "fix: use stdio inherit for unbuffered Claude output"
-- Needed fix: "fix: correct Claude CLI invocation in autopilot"
-<!-- Patterns that caused issues -->
+- **Don't use `--print` mode default text output for streaming**: It buffers the entire response (~8+ seconds of silence)
+- **Don't assume `stdio: 'inherit'` streams through npm link**: It doesn't always work through the bin wrapper
+- **Don't retry on timeouts**: If Claude timed out, retrying immediately won't help
 
 ## Patterns
 
-<!-- Common patterns observed in this codebase -->
+- Commander.js for CLI commands with options
+- ESM modules (import, not require)
+- JSON sprint files in docs/sprints/ for tracking features
+- State persistence in .shiplog/ directory (gitignored)
 
 ---
 
-*Last updated: 2025-12-11T21:16:18.630Z*
+*Last updated: 2025-12-11*

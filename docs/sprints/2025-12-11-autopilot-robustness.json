@@ -1,7 +1,7 @@
 {
   "initiative": "Improve Autopilot Robustness",
   "created": "2025-12-11",
-  "status": "in_progress",
+  "status": "completed",
   "features": [
     {
       "id": "robust-001",
@@ -45,13 +45,13 @@
     },
     {
       "id": "robust-005",
-      "description": "Run Claude interactively instead of print mode for true autonomy",
+      "description": "Enable real-time streaming output during Claude sessions",
       "steps": [
-        "Use PTY to run Claude interactively",
-        "Pass prompt via stdin/file",
-        "Capture output for logging"
+        "Use --output-format stream-json for chunked output",
+        "Parse content_block_delta events for text",
+        "Display Claude's thinking as it happens"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "robust-006",

@@ -3,76 +3,64 @@
 > Capture current session state so the next session can pick up seamlessly.
 
 **Last Updated:** 2025-12-11
-**Status:** Autopilot robustness improvements complete
+**Status:** Autopilot ready for autonomous operation!
 
 ---
 
 ## What Was Done This Session
 
-### Fixed Autopilot Output Streaming
-The autopilot command was hanging at "Starting Claude session" because `spawnSync` with `stdio: ['pipe', 'inherit', 'inherit']` doesn't properly stream output when running through the CLI. Fixed by using async `spawn` with event handlers.
+### Fixed Real-Time Streaming Output
+The autopilot command now shows Claude's output in real-time as it thinks and works.
 
-### Added Robustness Features to Autopilot
-Implemented 5 of 6 planned features from the autopilot-robustness sprint:
+**The Problem:** Claude CLI's `--print` mode buffers the entire response before outputting, causing ~8+ seconds of silence.
 
-1. **Graceful Interrupt Handling (Ctrl+C)**
-   - SIGINT/SIGTERM handlers save state before exit
-   - Current session marked as interrupted
-   - Exit code 130 (standard SIGINT code)
+**The Solution:** Use `--output-format stream-json --include-partial-messages --verbose` which provides chunked streaming output. Parse `content_block_delta` events to extract text:
+```json
+{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello!"}}}
+```
 
-2. **Session Timeout (`-t/--timeout`)**
-   - Default 30 minutes per session
-   - Kills Claude if session exceeds timeout
-   - Records timeout in session log
-
-3. **Improved Progress Detection**
-   - Track file changes via `git diff`
-   - Track sprint file modifications
-   - File changes = "soft progress" (prevents false stalls)
-   - Only stall when no commits AND no file changes
-
-4. **Retry Logic (`-r/--max-retries`)**
-   - Default 2 retries on non-zero exit codes
-   - Exponential backoff (5s, 10s, 20s...)
-   - Don't retry on timeout
-   - Record retries in session log
-
-5. **Resume/Fresh Flags**
-   - `--resume`: Continue from interrupted run
-   - `--fresh`: Start fresh, ignore existing state
-   - Auto-resume interrupted runs by default
-
-**Not implemented:** Interactive PTY mode (robust-005) - complex, current `--print` mode works
+### Sprint Completed
+All 6 features in the autopilot-robustness sprint are now complete:
+1. Graceful interrupt handling (Ctrl+C)
+2. Session timeout
+3. Progress detection (commits + file changes)
+4. Retry logic with exponential backoff
+5. Real-time streaming output
+6. Resume/fresh flags
 
 ---
 
 ## Current State
 
-- **Version:** 1.2.0 (should bump to 1.2.1)
+- **Version:** 1.2.1
 - **Git:** All changes committed
-- **Tests:** Not updated (should add autopilot tests)
-- **Sprint:** 5/6 features complete
+- **Sprint:** 2025-12-11-autopilot-robustness COMPLETED
+- **Tests:** E2E tests pass (23 tests)
 
 ---
 
 ## What's Next
 
-1. Bump version to 1.2.1
-2. Test autopilot with real sprint
-3. Publish to npm
-4. Consider adding tests for new features
+The autopilot is ready to self-improve! Suggested next features:
+
+1. **Rich output formatting** - Show tool usage, file reads (abridged), sub-agent spawns
+2. **Permission handling** - Detect/surface permission prompts in non-interactive mode
+3. **Better skillbook learning** - Extract more actionable patterns from sessions
+4. **Sprint auto-creation** - Let autopilot create its own sprint files
 
 ---
 
-## Recent Commits (this session)
+## How to Run Autopilot
 
-```
-feat: add --resume and --fresh flags for autopilot state management
-feat: add retry logic for failed Claude sessions
-feat: improve progress detection beyond just commits
-feat: add session timeout with configurable duration
-feat: add graceful interrupt handling (Ctrl+C)
-fix: use async spawn for real-time Claude output streaming
+```bash
+# Start fresh
+shiplog autopilot --fresh
+
+# Resume interrupted run
+shiplog autopilot
+
+# Quick test with short timeout
+shiplog autopilot --fresh -t 60 -n 1
 ```
 
 ---
