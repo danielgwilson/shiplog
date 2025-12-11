@@ -24,6 +24,7 @@
 | Configure GitHub repo | 2025-12-08 | Description, topics, issues enabled |
 | Make repo public | 2025-12-08 | github.com/danielgwilson/shiplog |
 | **Fix hook matcher format** | 2025-12-10 | Changed `{}` to `""` - Claude Code requires string |
+| **Add doctor command** | 2025-12-11 | v1.1.4 - validates installation health, auto-fixes issues |
 
 ---
 
@@ -37,7 +38,7 @@
 
 | Task | Priority | Notes |
 |------|----------|-------|
-| Add more test coverage | P2 | Edge cases, error handling |
+| Publish v1.1.4 | P1 | Doctor command ready |
 | Promote / share | P2 | Tweet, post, get feedback |
 
 ---
@@ -55,4 +56,6 @@
 - v1.1.0: Initial publish with upgrade command and hook fixes
 - v1.1.1: Author name fix (Daniel G Wilson)
 - v1.1.2: New README with badges and driver's seat philosophy
+- v1.1.3: Hook matcher fix (string not object)
+- v1.1.4: Doctor command for health validation
 - Repo is now PUBLIC

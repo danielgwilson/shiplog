@@ -2,45 +2,52 @@
 
 > Capture current session state so the next session can pick up seamlessly.
 
-**Last Updated:** 2025-12-10
-**Status:** v1.1.3 ready to publish
+**Last Updated:** 2025-12-11
+**Status:** v1.1.4 ready to publish
 
 ---
 
 ## What Was Done This Session
 
-### Fixed hook matcher format (CRITICAL BUG)
-- Claude Code requires `matcher` to be a **string**, not an object
-- We were generating `"matcher": {}` which caused validation errors
-- Fixed to `"matcher": ""` (empty string = match all)
-- Updated tests to check `typeof matcher === 'string'` (not just existence)
+### Added `shiplog doctor` command
+New health check command that validates shiplog installation:
+- Checks all required directories and files exist
+- Validates settings.local.json hook format (catches the matcher bug!)
+- Detects v1 vs v2 installations
+- Checks hook scripts are executable
+- Reports issues with suggested fixes
+- `--fix` flag to auto-repair issues
+
+Also fixed this project's own settings.local.json (was using old hook format).
 
 Files changed:
-- `src/commands/init.ts`
-- `src/commands/upgrade.ts`
-- `src/__tests__/e2e.test.ts`
+- `src/commands/doctor.ts` (new)
+- `src/index.ts` (register command)
+- `src/__tests__/e2e.test.ts` (10 new tests, 33 total)
+- `package.json` (version bump)
 
 ---
 
 ## Current State
 
-- **Version:** 1.1.3 (bumped, not yet published)
+- **Version:** 1.1.4
 - **Git:** Committed, ready to push
-- **Tests:** 23 passing
-- **CI:** Should pass (just string change)
+- **Tests:** 33 passing
+- **CI:** Should pass
 
 ---
 
 ## What's Next
 
-1. Publish v1.1.3 to npm
-2. Existing users with broken settings need to re-run `shiplog init --force` or manually fix
+1. Publish v1.1.4 to npm
+2. Users can run `shiplog doctor` to check their installation
+3. Users can run `shiplog doctor --fix` to auto-repair issues
 
 ---
 
 ## Open Questions for Human
 
-Do you want me to publish v1.1.3 to npm now?
+Ready to publish v1.1.4?
 
 ---
 
