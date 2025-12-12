@@ -3,72 +3,76 @@
 > Capture current session state so the next session can pick up seamlessly.
 
 **Last Updated:** 2025-12-11
-**Status:** Agent SDK Upgrade Complete!
+**Status:** Autopilot v2 Complete!
 
 ---
 
 ## What Was Done This Session
 
-### Completed Agent SDK Upgrade Sprint (8/8 features)
+### Completed Captain-Crew Loop Sprint (8/8 features)
 
-Migrated autopilot from CLI spawning to native Anthropic Agent SDK:
+Implemented the full quality-gated iteration system:
 
-1. **SDK Installation** - Added @anthropic-ai/claude-agent-sdk v0.1.65
-2. **CLI Replacement** - Replaced spawn('claude') with SDK query() API
-3. **Session Resume** - Store session ID in state.currentSessionId for resume
-4. **Permission Handling** - Using permissionMode: 'acceptEdits' for autonomous operation
-5. **System Prompt** - Using systemPrompt with preset: 'claude_code' + append
-6. **Streaming Output** - Handling assistant, tool_progress, result message types
-7. **Budget Controls** - Added --max-budget option and cost/token tracking
-8. **Code Cleanup** - Removed all spawn/stream-json code, using AbortController
+1. **Sprint-local memory** - `.shiplog/sprint-memory.json` tracks iterations, approaches, results, learnings, failures
+2. **Loop detection** - Analyzes memory for oscillation patterns before each attempt
+3. **Review phase** - Independent sub-agent with LIMITED context (just output + criteria)
+4. **Critique injection** - Failed reviews feed critique + memory into next iteration
+5. **Binary test gate** - Runs tests before review, instant rejection if tests fail
+6. **Quality criteria** - Configurable per sprint, defaults based on sprint type
+7. **Battle-tested permissions** - `shiplog init` creates .claude/settings.json with safe allowlist
+8. **SKILLBOOK learning** - Captures critique patterns for future crews
 
-**Benefits:**
-- Native TypeScript SDK vs fragile CLI parsing
-- Built-in cost tracking ($X.XXXX per session)
-- Session resume between iterations
-- AbortController for clean Ctrl+C handling
-- ~100 lines of stream parsing code removed
+**Key insight from user:** Safety comes from curated allowlists in `.claude/settings.json`, not `bypassPermissions`. The init command now ships with battle-tested permissions from styl-my.
 
 ---
 
 ## Current State
 
-- **Version:** Ready for 1.3.0
+- **Version:** 1.5.0
 - **Git:** All changes committed
-- **Sprint:** 2025-12-11-agent-sdk-upgrade (COMPLETED - 8/8 features)
+- **Sprint:** 2025-12-11-captain-crew-loop (COMPLETED - 8/8 features)
 - **Tests:** 42 tests pass
 
 ---
 
 ## What's Next
 
-1. **Bump version to 1.3.0** and publish to npm
-2. **Test autopilot with SDK** - run `shiplog autopilot --dry-run` to verify
-3. **Consider new features:**
-   - Model selection option (--model)
-   - MCP server integration
-   - Better tool progress display
+1. **Publish v1.5.0** to npm
+2. **Test the Captain-Crew loop** with a real sprint
+3. **Document the new features** in README
 
 ---
 
 ## Key Changes to Know
 
-### New Command Options
-```bash
-shiplog autopilot --max-budget 5.0  # Limit cost per session (default: $5)
+### New Autopilot Features
+
+The autopilot now implements a full quality loop:
+```
+RESEARCH → PLAN → IMPLEMENT → TEST → REVIEW → ITERATE
 ```
 
-### Cost Tracking
-Sessions now show cost and token usage:
-```
-📊 Session 1 Results:
-   Commits made: 3
-   Cost: $0.0185
-   Tokens: 1,234 in / 567 out
-```
+If review fails, it loops back with:
+- The critique
+- Sprint memory of what's been tried
+- Instructions to avoid repeating failures
 
-### Session Resume
-The SDK can resume sessions between iterations using stored session IDs.
+### Sprint Memory
+
+Each sprint gets `.shiplog/sprint-memory.json` tracking:
+- Iteration number
+- Approach taken
+- Results (success/failure)
+- Learnings
+- Files modified
+
+### Battle-Tested Permissions
+
+`shiplog init` now creates `.claude/settings.json` with:
+- MCP tools (exa, firecrawl, context7, playwright)
+- Safe bash patterns (pnpm, npm, npx, git, etc.)
+- File operations (Read, Edit, Write)
+- Explicit deny rules for footguns (sudo, rm -rf /, etc.)
 
 ---
 

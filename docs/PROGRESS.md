@@ -29,6 +29,7 @@
 | **Autopilot Robustness** | 2025-12-11 | Graceful Ctrl+C, timeout, progress detection, retry logic, resume |
 | **Streaming Output** | 2025-12-11 | v1.2.1 - Real-time streaming via stream-json format |
 | **Agent SDK Upgrade** | 2025-12-11 | v1.3.0 - Native SDK instead of CLI spawning, cost tracking |
+| **Autopilot v2: Captain-Crew Loop** | 2025-12-11 | v1.5.0 - Quality-gated iterations with memory, loop detection, independent review |
 
 ---
 
@@ -43,6 +44,7 @@
 
 | Task | Priority | Notes |
 |------|----------|-------|
+| Publish v1.5.0 | P1 | Captain-Crew loop ready |
 | Promote / share | P2 | Tweet, post, get feedback |
 
 ---
@@ -65,4 +67,5 @@
 - v1.2.0: Autopilot mode - outer loop for autonomous sessions (ACE-inspired)
 - v1.2.1: Real-time streaming output - see Claude's thinking as it happens
 - v1.3.0: Agent SDK upgrade - native SDK instead of CLI spawning, cost tracking
+- v1.5.0: Captain-Crew loop - quality-gated iterations with memory, loop detection, independent review, SKILLBOOK learning
 - Repo is now PUBLIC
