@@ -8,6 +8,7 @@ import { initCommand } from "./commands/init.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { autopilotCommand } from "./commands/autopilot.js";
+import { resetCommand } from "./commands/reset.js";
 
 // Read version from package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -32,5 +33,6 @@ program.addCommand(initCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(doctorCommand);
 program.addCommand(autopilotCommand);
+program.addCommand(resetCommand);
 
 program.parse();
