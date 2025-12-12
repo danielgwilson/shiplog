@@ -200,6 +200,8 @@ This is inspired by the [ACE (Agentic Context Engine) framework](https://github.
 
 📊 Session 1 Results:
    Commits made: 7
+   Cost: $0.0847
+   Tokens: 12,345 in / 2,456 out
    Total commits: 7
 📚 Updated SKILLBOOK.md with 2 learnings
 
@@ -220,6 +222,8 @@ This is inspired by the [ACE (Agentic Context Engine) framework](https://github.
 | **Git-Based Progress** | Only real commits count — no fake progress |
 | **Interruptible** | Ctrl+C stops cleanly, state is saved |
 | **Dry-Run Mode** | Preview everything without running Claude |
+| **Budget Limits** | Cap spending per session (default: $5) |
+| **Cost Tracking** | See cost and token usage per session |
 
 ### Prerequisites
 
@@ -273,6 +277,12 @@ shiplog autopilot -s 5
 
 # Quick run, fail fast on stalls
 shiplog autopilot -n 10 -s 2
+
+# Set session timeout (default: 30 minutes)
+shiplog autopilot -t 3600    # 1 hour per session
+
+# Set budget limit per session (default: $5)
+shiplog autopilot --max-budget 10.0
 ```
 
 ### Typical Workflow
@@ -347,6 +357,8 @@ npx shiplog upgrade --force       # Re-apply even if already v2
 shiplog autopilot
 shiplog autopilot --dry-run       # Preview without running
 shiplog autopilot -n 50 -s 5      # Custom iterations/threshold
+shiplog autopilot -t 3600         # 1 hour timeout per session
+shiplog autopilot --max-budget 10 # $10 budget per session
 
 # Check installation health
 shiplog doctor
