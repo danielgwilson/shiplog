@@ -2,7 +2,83 @@ import { Command } from "commander";
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
-import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
+import { query, type Options, type AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
+
+/**
+ * Built-in agents that mirror Claude Code's default agents.
+ * These enable the Task tool to spawn background tasks for exploration,
+ * planning, and complex multi-step work.
+ */
+const BUILTIN_AGENTS: Record<string, AgentDefinition> = {
+  "general-purpose": {
+    description: `General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries, use this agent to perform the search for you.`,
+    prompt: `You are a general-purpose agent capable of handling complex, multi-step tasks.
+
+Your capabilities:
+- Search and analyze codebases thoroughly
+- Execute multi-step operations
+- Make code changes when needed
+- Run tests and commands
+
+When working:
+1. Break complex tasks into clear steps
+2. Search thoroughly before making changes
+3. Verify your work as you go
+4. Report findings clearly and concisely
+
+Focus on completing the task efficiently while maintaining quality.`,
+    model: "sonnet",
+    // No tools specified = inherits all tools
+  },
+
+  "Explore": {
+    description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
+    prompt: `You are a fast, lightweight exploration agent optimized for codebase search and analysis.
+
+You operate in STRICT READ-ONLY mode. You cannot create, modify, or delete files.
+
+Your job is to quickly find and analyze code. When searching:
+- Use Glob for file pattern matching
+- Use Grep for content searching with regex
+- Use Read to examine file contents
+- Use Bash only for read-only commands (ls, git status, git log, git diff, find, cat, head, tail)
+
+Thoroughness levels:
+- "quick": Fast targeted searches, good for specific lookups
+- "medium": Moderate exploration, balances speed and coverage
+- "very thorough": Comprehensive analysis across multiple locations and naming conventions
+
+Always return findings with absolute file paths and line numbers when relevant.
+Be concise but thorough in your analysis.`,
+    tools: ["Read", "Glob", "Grep", "Bash"],
+    model: "haiku", // Fast model for exploration
+  },
+
+  "Plan": {
+    description: `Software architect agent for designing implementation plans. Use this when you need to plan the implementation strategy for a task. Returns step-by-step plans, identifies critical files, and considers architectural trade-offs.`,
+    prompt: `You are a planning agent that designs implementation strategies.
+
+Your job is to research the codebase and create actionable plans.
+
+When planning:
+1. Understand the current codebase structure
+2. Identify relevant files and patterns
+3. Consider architectural implications
+4. Break work into clear, ordered steps
+5. Flag potential risks or trade-offs
+
+You have access to exploration tools only - you cannot make changes.
+Focus on creating clear, actionable plans that can be executed by other agents.
+
+Output format:
+- Summary of findings
+- Step-by-step implementation plan
+- Key files to modify
+- Potential risks or considerations`,
+    tools: ["Read", "Glob", "Grep", "Bash"],
+    model: "sonnet",
+  },
+};
 
 // Module-level state for interrupt handling
 let currentAbortController: AbortController | null = null;
@@ -994,9 +1070,11 @@ async function runClaudeSession(
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: `\n\n# Autopilot Mode\nYou are running in autopilot mode. Work autonomously until the task is complete.\nMake commits frequently. Use /ship to check progress.`,
+      append: `\n\n# Autopilot Mode\nYou are running in autopilot mode. Work autonomously until the task is complete.\nMake commits frequently. Use /ship to check progress.\n\n# Available Subagents\nYou have access to these subagents via the Task tool:\n- general-purpose: For complex multi-step tasks and research\n- Explore: Fast codebase exploration (uses Haiku for speed)\n- Plan: Implementation planning and architecture design\n\nUse subagents liberally for exploration and parallel work to be more efficient.`,
     },
     abortController,
+    // Built-in agents for Task tool - enables background tasks like Claude Code
+    agents: BUILTIN_AGENTS,
     // Resume from previous session if provided
     ...(resumeSessionId && { resume: resumeSessionId }),
   };

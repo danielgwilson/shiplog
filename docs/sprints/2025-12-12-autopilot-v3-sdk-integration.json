@@ -1,0 +1,92 @@
+{
+  "initiative": "Autopilot v3: SDK Deep Integration",
+  "created": "2025-12-12",
+  "status": "in_progress",
+  "context": {
+    "why": "Current autopilot doesn't use subagents at all - no Explore, Plan, or general-purpose agents. Console output is much worse than Claude Code. Missing real-time streaming, todo tracking display, and structured outputs for review.",
+    "goal": "Make autopilot work like Claude Code with full subagent support, real-time streaming, and rich console output",
+    "research": "SDK docs show we need to define agents programmatically via the 'agents' option. Built-in Claude Code agents (Explore uses Haiku for speed, general-purpose uses Sonnet) are NOT automatically available via SDK.",
+    "quality_criteria": [
+      "Autopilot Claude can spawn background tasks via Task tool",
+      "Console shows real-time text streaming (not just completed blocks)",
+      "TodoWrite updates are surfaced in console output",
+      "Review phase uses structured outputs (no JSON parsing)",
+      "Tool usage shows relevant details (file paths, commands)"
+    ],
+    "test_command": "pnpm test"
+  },
+  "features": [
+    {
+      "id": "v3-001",
+      "description": "Add built-in agents (general-purpose, Explore, Plan) to SDK options",
+      "steps": [
+        "Define general-purpose agent with Sonnet model and all tools",
+        "Define Explore agent with Haiku model and read-only tools",
+        "Define Plan agent with Sonnet model and exploration tools",
+        "Add agents to sdkOptions in runClaudeSession",
+        "Test that Task tool invocations work in autopilot"
+      ],
+      "passes": false
+    },
+    {
+      "id": "v3-002",
+      "description": "Enable partial messages for real-time text streaming",
+      "steps": [
+        "Add includePartialMessages: true to SDK options",
+        "Handle stream_event message type in the response loop",
+        "Extract text deltas from content_block_delta events",
+        "Stream text to console as it arrives (not just complete blocks)",
+        "Test that output streams smoothly like Claude Code"
+      ],
+      "passes": false
+    },
+    {
+      "id": "v3-003",
+      "description": "Surface TodoWrite updates in console output",
+      "steps": [
+        "Detect TodoWrite tool_use blocks in assistant messages",
+        "Parse the todos array from tool input",
+        "Display formatted todo list with status icons",
+        "Show which todo is currently in_progress",
+        "Update display when todos change"
+      ],
+      "passes": false
+    },
+    {
+      "id": "v3-004",
+      "description": "Add structured outputs for review phase",
+      "steps": [
+        "Define JSON schema for ReviewResult (approved, critique, suggestions)",
+        "Add outputFormat option to review sub-agent SDK options",
+        "Extract structured_output from result message",
+        "Remove fragile JSON regex parsing",
+        "Test that review results are reliably parsed"
+      ],
+      "passes": false
+    },
+    {
+      "id": "v3-005",
+      "description": "Improve console output with richer tool details",
+      "steps": [
+        "Show file paths for Read/Write/Edit tools",
+        "Show abbreviated commands for Bash tool",
+        "Show pattern for Glob/Grep tools",
+        "Add spinner/progress indicator for long-running tools",
+        "Show token counts and cost updates periodically"
+      ],
+      "passes": false
+    },
+    {
+      "id": "v3-006",
+      "description": "Add custom shiplog tools via SDK MCP server",
+      "steps": [
+        "Create shiplog MCP server with createSdkMcpServer",
+        "Add check_sprint tool to get current sprint status",
+        "Add get_memory tool to access sprint memory",
+        "Add update_progress tool to update PROGRESS.md",
+        "Register MCP server in SDK options"
+      ],
+      "passes": false
+    }
+  ]
+}
