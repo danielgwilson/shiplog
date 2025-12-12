@@ -25,6 +25,7 @@
   "author": "Daniel G Wilson",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.65",
     "commander": "^12.1.0"
   },
   "devDependencies": {

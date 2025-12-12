@@ -1,10 +1,11 @@
 import { Command } from "commander";
 import * as fs from "fs";
 import * as path from "path";
-import { spawn, execSync, ChildProcess } from "child_process";
+import { execSync } from "child_process";
+import { query, type Options, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
 // Module-level state for interrupt handling
-let currentClaudeProcess: ChildProcess | null = null;
+let currentAbortController: AbortController | null = null;
 let currentState: AutopilotState | null = null;
 let currentCwd: string | null = null;
 let isInterrupted = false;
@@ -14,6 +15,7 @@ interface AutopilotOptions {
   stallThreshold: number;
   timeout: number; // Session timeout in seconds
   maxRetries: number; // Max retries per session on failure
+  maxBudget: number; // Max budget per session in USD
   resume: boolean; // Continue from interrupted state
   fresh: boolean; // Start fresh, ignore existing state
   dryRun: boolean;
@@ -32,6 +34,9 @@ interface SessionLog {
   exitCode?: number;
   timedOut?: boolean;
   retriesUsed?: number;
+  costUsd?: number;
+  inputTokens?: number;
+  outputTokens?: number;
   status: "running" | "completed" | "stalled" | "error" | "timeout";
 }
 
@@ -52,10 +57,10 @@ function handleInterrupt(): void {
   console.log("\n\n⚠️  Interrupt received (Ctrl+C)");
   console.log("💾 Saving state...");
 
-  // Kill Claude process if running
-  if (currentClaudeProcess && !currentClaudeProcess.killed) {
+  // Abort SDK query if running
+  if (currentAbortController) {
     console.log("🛑 Stopping Claude session...");
-    currentClaudeProcess.kill("SIGTERM");
+    currentAbortController.abort();
   }
 
   // Update and save state
@@ -269,118 +274,141 @@ function generateContinuationPrompt(
   return prompt;
 }
 
-function runClaudeSession(
+interface SessionResult {
+  exitCode: number;
+  timedOut: boolean;
+  sessionId?: string;
+  costUsd?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+async function runClaudeSession(
   cwd: string,
   prompt: string,
   options: AutopilotOptions
-): Promise<{ exitCode: number; output: string; timedOut: boolean }> {
+): Promise<SessionResult> {
   if (options.dryRun) {
     console.log("\n📝 Would run claude with prompt:\n");
     console.log("---");
     console.log(prompt.slice(0, 500) + (prompt.length > 500 ? "..." : ""));
     console.log("---\n");
-    return Promise.resolve({ exitCode: 0, output: "(dry run)", timedOut: false });
+    return { exitCode: 0, timedOut: false };
   }
 
   const timeoutSeconds = options.timeout;
-  console.log(`\n🚀 Starting Claude session (timeout: ${Math.floor(timeoutSeconds / 60)}m)...\n`);
+  console.log(`\n🚀 Starting Claude session (timeout: ${Math.floor(timeoutSeconds / 60)}m, budget: $${options.maxBudget})...\n`);
 
   // Save prompt for reference
   const promptPath = path.join(cwd, ".shiplog/current-prompt.md");
   fs.writeFileSync(promptPath, prompt);
 
-  return new Promise((resolve) => {
-    let timedOut = false;
-    let timeoutHandle: NodeJS.Timeout | null = null;
+  // Set up abort controller for timeout and interrupt handling
+  const abortController = new AbortController();
+  currentAbortController = abortController;
 
-    // Use streaming JSON output for real-time output
-    // Note: stream-json requires --verbose flag
-    const claude = spawn(
-      "claude",
-      ["-p", "--verbose", "--output-format", "stream-json", "--include-partial-messages"],
-      {
-        cwd,
-        stdio: ["pipe", "pipe", "pipe"],  // Need stdin to send prompt
-        env: { ...process.env },
+  let timedOut = false;
+  let timeoutHandle: NodeJS.Timeout | null = null;
+
+  // Set up timeout
+  if (timeoutSeconds > 0) {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      console.log(`\n\n⏱️  Session timeout (${Math.floor(timeoutSeconds / 60)}m) - aborting...`);
+      abortController.abort();
+    }, timeoutSeconds * 1000);
+  }
+
+  // Configure SDK options
+  const sdkOptions: Options = {
+    model: "claude-sonnet-4-5-20250929",
+    cwd,
+    maxBudgetUsd: options.maxBudget,
+    permissionMode: "acceptEdits", // Auto-approve edits in autopilot mode
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code",
+      append: `\n\n# Autopilot Mode\nYou are running in autopilot mode. Work autonomously until the task is complete.\nMake commits frequently. Use /ship to check progress.`,
+    },
+    abortController,
+  };
+
+  let sessionId: string | undefined;
+  let costUsd: number | undefined;
+  let inputTokens: number | undefined;
+  let outputTokens: number | undefined;
+
+  try {
+    for await (const msg of query({ prompt, options: sdkOptions })) {
+      // Extract session ID from init message
+      if (msg.type === "system" && msg.subtype === "init") {
+        sessionId = msg.session_id;
+        console.log(`🔗 Session: ${sessionId?.slice(0, 8)}...`);
       }
-    );
 
-    // Forward streaming output to terminal - parse stream-json format
-    let jsonBuffer = "";  // Buffer for incomplete JSON lines
-    if (claude.stdout) {
-      claude.stdout.on("data", (data: Buffer) => {
-        jsonBuffer += data.toString();
-        const lines = jsonBuffer.split("\n");
-        // Keep last potentially incomplete line in buffer
-        jsonBuffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const event = JSON.parse(line);
-            // Handle stream_event wrapper - extract inner event
-            if (event.type === "stream_event" && event.event) {
-              const inner = event.event;
-              // content_block_delta contains streaming text chunks
-              if (inner.type === "content_block_delta" && inner.delta?.type === "text_delta") {
-                process.stdout.write(inner.delta.text);
-              }
-            }
-          } catch {
-            // Not valid JSON - skip
+      // Handle assistant messages - stream text to stdout
+      if (msg.type === "assistant") {
+        const content = msg.message.content;
+        for (const block of content) {
+          if (block.type === "text") {
+            process.stdout.write(block.text);
+          } else if (block.type === "tool_use") {
+            console.log(`\n🔧 ${block.name}`);
           }
         }
-      });
-    }
-    if (claude.stderr) {
-      claude.stderr.on("data", (data: Buffer) => {
-        // stderr might have useful error info - show it
-        process.stderr.write(data);
-      });
-    }
-
-    // Send prompt via stdin
-    if (claude.stdin) {
-      claude.stdin.write(prompt);
-      claude.stdin.end();
-    }
-
-    // Track process for interrupt handling
-    currentClaudeProcess = claude;
-
-    // Set up timeout
-    if (timeoutSeconds > 0) {
-      timeoutHandle = setTimeout(() => {
-        timedOut = true;
-        console.log(`\n\n⏱️  Session timeout (${Math.floor(timeoutSeconds / 60)}m) - killing Claude process...`);
-        if (!claude.killed) {
-          claude.kill("SIGTERM");
-        }
-      }, timeoutSeconds * 1000);
-    }
-
-    // Prompt is sent via stdin above
-
-    claude.on("close", (code) => {
-      currentClaudeProcess = null;
-      if (timeoutHandle) clearTimeout(timeoutHandle);
-
-      const exitCode = code ?? 0;
-      if (timedOut) {
-        console.log(`\n⏱️  Claude session timed out (exit code: ${exitCode})`);
-      } else {
-        console.log(`\n✅ Claude session ended (exit code: ${exitCode})`);
       }
-      resolve({ exitCode, output: "", timedOut });
-    });
 
-    claude.on("error", (err) => {
-      currentClaudeProcess = null;
-      if (timeoutHandle) clearTimeout(timeoutHandle);
-      console.error(`\n❌ Error starting Claude: ${err.message}`);
-      resolve({ exitCode: 1, output: "", timedOut: false });
-    });
-  });
+      // Show tool progress
+      if (msg.type === "tool_progress") {
+        // Only show for long-running tools
+        if (msg.elapsed_time_seconds > 2) {
+          process.stdout.write(`\r   [${msg.tool_name}] ${Math.floor(msg.elapsed_time_seconds)}s...`);
+        }
+      }
+
+      // Handle result (completion)
+      if (msg.type === "result") {
+        if (msg.usage) {
+          inputTokens = msg.usage.input_tokens;
+          outputTokens = msg.usage.output_tokens;
+        }
+        costUsd = msg.total_cost_usd;
+
+        if (msg.subtype === "success") {
+          console.log(`\n\n✅ Claude session completed`);
+        } else {
+          console.log(`\n\n⚠️  Session ended: ${msg.subtype}`);
+          if (msg.errors?.length) {
+            console.log(`   Errors: ${msg.errors.join(", ")}`);
+          }
+        }
+      }
+    }
+
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    currentAbortController = null;
+
+    return {
+      exitCode: 0,
+      timedOut,
+      sessionId,
+      costUsd,
+      inputTokens,
+      outputTokens,
+    };
+  } catch (err) {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    currentAbortController = null;
+
+    const error = err as Error;
+    if (error.name === "AbortError" || timedOut) {
+      console.log(`\n⏱️  Claude session timed out`);
+      return { exitCode: 1, timedOut: true, sessionId, costUsd, inputTokens, outputTokens };
+    }
+
+    console.error(`\n❌ Error in Claude session: ${error.message}`);
+    return { exitCode: 1, timedOut: false, sessionId, costUsd, inputTokens, outputTokens };
+  }
 }
 
 function extractLearnings(
@@ -571,6 +599,11 @@ EXAMPLES
     "2"
   )
   .option(
+    "-b, --max-budget <usd>",
+    "Max budget per session in USD (default: 5.0)",
+    "5.0"
+  )
+  .option(
     "--resume",
     "Continue from interrupted autopilot run",
     false
@@ -609,6 +642,10 @@ EXAMPLES
       typeof options.maxRetries === "string"
         ? parseInt(options.maxRetries, 10)
         : options.maxRetries;
+    const maxBudget =
+      typeof options.maxBudget === "string"
+        ? parseFloat(options.maxBudget)
+        : options.maxBudget;
 
     console.log("\n" + "=".repeat(60));
     console.log("  🚁 Shiplog Autopilot");
@@ -629,6 +666,7 @@ EXAMPLES
     console.log(`🔄 Max iterations: ${maxIterations}`);
     console.log(`⏸️  Stall threshold: ${stallThreshold} iterations`);
     console.log(`⏱️  Session timeout: ${Math.floor(timeout / 60)} minutes`);
+    console.log(`💰 Budget per session: $${maxBudget}`);
 
     if (options.dryRun) {
       console.log(`\n🧪 DRY RUN MODE - No actual execution\n`);
@@ -725,6 +763,9 @@ EXAMPLES
       let exitCode = 0;
       let timedOut = false;
       let retriesUsed = 0;
+      let costUsd: number | undefined;
+      let inputTokens: number | undefined;
+      let outputTokens: number | undefined;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         if (attempt > 0) {
@@ -740,10 +781,14 @@ EXAMPLES
           stallThreshold,
           timeout,
           maxRetries,
+          maxBudget,
         });
 
         exitCode = result.exitCode;
         timedOut = result.timedOut;
+        costUsd = result.costUsd;
+        inputTokens = result.inputTokens;
+        outputTokens = result.outputTokens;
 
         // Success or timeout (don't retry timeouts)
         if (exitCode === 0 || timedOut) {
@@ -774,6 +819,9 @@ EXAMPLES
       sessionLog.exitCode = exitCode;
       sessionLog.timedOut = timedOut;
       sessionLog.retriesUsed = retriesUsed;
+      sessionLog.costUsd = costUsd;
+      sessionLog.inputTokens = inputTokens;
+      sessionLog.outputTokens = outputTokens;
       sessionLog.status = timedOut ? "timeout" : (exitCode !== 0 ? "error" : "completed");
 
       state.totalCommits += commitsMade;
@@ -783,6 +831,12 @@ EXAMPLES
       console.log(`   Files changed: ${changedFiles}${sprintFileModified ? " (sprint updated)" : ""}`);
       if (retriesUsed > 0) {
         console.log(`   Retries used: ${retriesUsed}/${maxRetries}`);
+      }
+      if (costUsd !== undefined) {
+        console.log(`   Cost: $${costUsd.toFixed(4)}`);
+      }
+      if (inputTokens && outputTokens) {
+        console.log(`   Tokens: ${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out`);
       }
       console.log(`   Total commits: ${state.totalCommits}`);
 

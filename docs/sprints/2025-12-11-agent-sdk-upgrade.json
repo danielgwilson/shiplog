@@ -4,7 +4,7 @@
   "status": "in_progress",
   "context": {
     "why": "The current autopilot spawns `claude` CLI and parses stream-json output - a fragile approach we just spent hours debugging. The Agent SDK provides native TypeScript APIs for streaming, sessions, permissions, and hooks - eliminating all the CLI gymnastics.",
-    "recommendation": "Use V2 Preview API (unstable_v2_*) - it's dramatically simpler with send()/receive() pattern instead of async generator coordination. The 'unstable' prefix is about API stability, not reliability. Missing features (forking) aren't needed for autopilot.",
+    "recommendation": "Use V1 query() API - it supports permissions (canUseTool), system prompts, and all the features needed for autopilot. V2 Preview is simpler but lacks permission callbacks.",
     "sdk_package": "@anthropic-ai/claude-agent-sdk",
     "docs": {
       "v1": "https://platform.claude.com/docs/en/agent-sdk/typescript",
@@ -23,8 +23,8 @@
         "Verify streaming output works natively (no JSON parsing needed)",
         "Confirm TypeScript 5.2+ for 'await using' syntax"
       ],
-      "passes": false,
-      "notes": "V2 uses send()/receive() pattern - much simpler than V1 async generators"
+      "passes": true,
+      "notes": "Using V1 query() API for full feature support. Test script at scripts/test-sdk.ts works."
     },
     {
       "id": "sdk-002",
@@ -35,8 +35,8 @@
         "Replace stream-json parsing with native session.receive() iteration",
         "Handle assistant messages: msg.type === 'assistant' with msg.message.content"
       ],
-      "passes": false,
-      "notes": "This eliminates ~100 lines of stream parsing code we just debugged"
+      "passes": true,
+      "notes": "Using V1 query() API instead of V2. Eliminated spawn/stream-json parsing."
     },
     {
       "id": "sdk-003",
@@ -72,8 +72,8 @@
         "Append autopilot context (current task, learnings) via systemPrompt.append",
         "Test that Claude picks up project instructions"
       ],
-      "passes": false,
-      "notes": "systemPrompt: { preset: 'claude_code', append: 'Autopilot mode...' }"
+      "passes": true,
+      "notes": "Using systemPrompt: { preset: 'claude_code', append: '...' } in runClaudeSession"
     },
     {
       "id": "sdk-006",
@@ -85,8 +85,8 @@
         "Handle 'error' messages gracefully",
         "Handle 'system' messages (init, completion)"
       ],
-      "passes": false,
-      "notes": "Goal: output similar to Claude Code's native display"
+      "passes": true,
+      "notes": "Handling assistant, tool_progress, result messages in runClaudeSession"
     },
     {
       "id": "sdk-007",
@@ -98,8 +98,8 @@
         "Handle budget_exceeded errors gracefully",
         "Show cost summary at end of session"
       ],
-      "passes": false,
-      "notes": "SDK has native budget support: maxBudgetUsd: 5.0"
+      "passes": true,
+      "notes": "Added -b/--max-budget option, tracking cost/tokens per session"
     },
     {
       "id": "sdk-008",
