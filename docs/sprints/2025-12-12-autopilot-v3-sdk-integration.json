@@ -1,7 +1,7 @@
 {
   "initiative": "Autopilot v3: SDK Deep Integration",
   "created": "2025-12-12",
-  "status": "in_progress",
+  "status": "completed",
   "context": {
     "why": "Current autopilot doesn't use subagents at all - no Explore, Plan, or general-purpose agents. Console output is much worse than Claude Code. Missing real-time streaming, todo tracking display, and structured outputs for review.",
     "goal": "Make autopilot work like Claude Code with full subagent support, real-time streaming, and rich console output",
@@ -52,7 +52,8 @@
         "Show which todo is currently in_progress",
         "Update display when todos change"
       ],
-      "passes": false
+      "passes": true,
+      "notes": "Added formatTodoList helper that displays a nicely formatted todo box with status icons."
     },
     {
       "id": "v3-004",
@@ -64,7 +65,8 @@
         "Remove fragile JSON regex parsing",
         "Test that review results are reliably parsed"
       ],
-      "passes": false
+      "passes": true,
+      "notes": "Added REVIEW_RESULT_SCHEMA constant and outputFormat option. Now extracts structured_output from result.subtype==='success' instead of regex parsing."
     },
     {
       "id": "v3-005",
@@ -76,7 +78,8 @@
         "Add spinner/progress indicator for long-running tools",
         "Show token counts and cost updates periodically"
       ],
-      "passes": false
+      "passes": true,
+      "notes": "formatToolUse already handled tool details. Added SPINNER_FRAMES for animated progress, getSpinnerFrame helper, and periodic session stats display every 10 messages."
     },
     {
       "id": "v3-006",
@@ -88,7 +91,8 @@
         "Add update_progress tool to update PROGRESS.md",
         "Register MCP server in SDK options"
       ],
-      "passes": false
+      "passes": true,
+      "notes": "Added createShiplogMcpServer with three tools: check_sprint, get_memory, update_progress. Registered as mcpServers: { shiplog: shiplogMcp } in SDK options. System prompt updated to inform Claude about available tools."
     }
   ]
 }

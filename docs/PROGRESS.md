@@ -32,6 +32,7 @@
 | **Autopilot v2: Captain-Crew Loop** | 2025-12-11 | v1.5.0 - Quality-gated iterations with memory, loop detection, independent review |
 | **Reset command** | 2025-12-11 | `shiplog reset` to restart sprints fresh |
 | **Settings.json refactor** | 2025-12-11 | Use project-level settings.json (shared) instead of settings.local.json |
+| **Autopilot v3: SDK Deep Integration** | 2025-12-12 | Built-in agents, real-time streaming, TodoWrite display, structured outputs, custom MCP tools |
 
 ---
 
@@ -70,4 +71,5 @@
 - v1.2.1: Real-time streaming output - see Claude's thinking as it happens
 - v1.3.0: Agent SDK upgrade - native SDK instead of CLI spawning, cost tracking
 - v1.5.0: Captain-Crew loop - quality-gated iterations with memory, loop detection, independent review, SKILLBOOK learning
+- v1.6.0: Autopilot v3 - SDK deep integration with subagents, real-time streaming, structured outputs, custom MCP tools
 - Repo is now PUBLIC
