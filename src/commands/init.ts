@@ -169,25 +169,11 @@ export const initCommand = new Command("init")
         continue;
       }
 
-      // Special handling for settings.local.json - preserve mcpServers
+      // Special handling for settings.local.json - never overwrite user's config
       if (file.path === ".claude/settings.local.json" && fs.existsSync(filePath)) {
-        try {
-          const existing = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-          if (existing.mcpServers) {
-            const newSettings = JSON.parse(file.content);
-            newSettings.mcpServers = existing.mcpServers;
-            fs.writeFileSync(filePath, JSON.stringify(newSettings, null, 2) + "\n");
-            console.log(`  🔄 Updated ${file.path} (preserved mcpServers)`);
-            created++;
-            continue;
-          }
-        } catch (e) {
-          // If parsing fails, warn but don't overwrite
-          console.log(`  ⚠️  Skipped ${file.path} (could not parse existing file)`);
-          console.log(`     Your mcpServers config was preserved.`);
-          skipped++;
-          continue;
-        }
+        console.log(`  ⏭️  Skipped ${file.path} (preserving your existing config)`);
+        skipped++;
+        continue;
       }
 
       fs.writeFileSync(filePath, file.content);
