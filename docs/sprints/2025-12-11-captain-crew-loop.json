@@ -1,0 +1,65 @@
+{
+  "initiative": "Autopilot v2: Captain-Crew Loop with Memory",
+  "created": "2025-12-11",
+  "status": "completed",
+  "context": {
+    "problem": "Current autopilot is 'fire and forget'. No quality gates, no iteration on critique, no memory of what was tried. Leads to: (1) incomplete work marked done, (2) oscillation loops (fix A breaks B, fix B breaks A), (3) no research with current sources.",
+    "solution": "Encode Daniel's manual process: RESEARCH → PLAN → IMPLEMENT → TEST → REVIEW → ITERATE. Add sprint-local memory to track what's been tried and prevent loops. Independent sub-agents for research and review phases.",
+    "inspiration": [
+      "Daniel's manual workflow that gets great results",
+      "https://www.reddit.com/r/ClaudeAI/comments/1pez28a/",
+      "https://github.com/kayba-ai/agentic-context-engine"
+    ],
+    "architecture": "RESEARCH (sub-agents) → PLAN → IMPLEMENT (tools) → TEST (binary gate) → REVIEW (independent) → if issues: ITERATE with cumulative memory → loop until REVIEW passes"
+  },
+  "features": [
+    {
+      "id": "v2-001",
+      "description": "Sprint-local memory file",
+      "deliverable": "Create .shiplog/sprint-memory.md that tracks: each iteration's approach, results, learnings, and failures. Persists across sessions. Injected into crew prompts.",
+      "passes": true
+    },
+    {
+      "id": "v2-002",
+      "description": "Loop detection",
+      "deliverable": "Before crew tries an approach, check sprint-memory for 'we tried X, it broke Y'. Warn or block repeating known-failed approaches. Prevent oscillation.",
+      "passes": true
+    },
+    {
+      "id": "v2-003",
+      "description": "Review phase with independent sub-agent",
+      "deliverable": "After crew marks feature done, spawn review sub-agent with LIMITED context (just the output + criteria, not full implementation journey). Returns: approved boolean + critique string.",
+      "passes": true
+    },
+    {
+      "id": "v2-004",
+      "description": "Critique injection for iteration",
+      "deliverable": "If review fails, next crew session gets: (1) the critique, (2) sprint-memory of what's been tried, (3) instruction to address critique without repeating failures.",
+      "passes": true
+    },
+    {
+      "id": "v2-005",
+      "description": "Binary test gate",
+      "deliverable": "For code sprints: run tests, must pass before review. For UI: playwright screenshot check. Sprint can specify test_command. Failure = instant rejection, no review needed.",
+      "passes": true
+    },
+    {
+      "id": "v2-006",
+      "description": "Quality criteria in sprint config",
+      "deliverable": "Sprint files can specify quality_criteria array. Review sub-agent checks these. Defaults: research='sources cited', code='tests pass, minimal changes'.",
+      "passes": true
+    },
+    {
+      "id": "v2-007",
+      "description": "Autopilot runs autonomously by default",
+      "deliverable": "Uses bypassPermissions mode so autopilot just flies. Safety comes from sprint scope, not permission prompts. MCP tools work if configured in user settings.",
+      "passes": true
+    },
+    {
+      "id": "v2-008",
+      "description": "SKILLBOOK learning from critiques",
+      "deliverable": "When Captain catches an issue, add to SKILLBOOK: 'Captain caught: [issue] in [context]'. Future crews see these patterns and avoid them.",
+      "passes": true
+    }
+  ]
+}

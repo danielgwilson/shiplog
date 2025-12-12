@@ -790,21 +790,64 @@ Use this checklist at the start of each agent session.
 }
 
 function getSETTINGSjson(): string {
+  // Battle-tested autonomous permissions from styl-my
+  // These enable Claude to work autonomously while blocking footguns
   return `{
   "permissions": {
     "allow": [
+      "mcp__exa__web_search_exa",
+      "mcp__exa__get_code_context_exa",
+      "mcp__firecrawl__firecrawl_search",
+      "mcp__firecrawl__firecrawl_scrape",
+      "mcp__firecrawl__firecrawl_map",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_wait_for",
+      "Bash(pnpm:*)",
       "Bash(npm:*)",
       "Bash(npx:*)",
       "Bash(node:*)",
       "Bash(git:*)",
+      "Bash(echo:*)",
+      "Bash(pwd)",
       "Bash(ls:*)",
       "Bash(cat:*)",
-      "Bash(pwd)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(xargs:*)",
+      "Bash(which:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(curl:*)",
+      "Bash(jq:*)",
+      "Bash(sleep:*)",
+      "Bash(timeout:*)",
       "Read(**/*)",
       "Edit(**/*)",
       "Write(**/*)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -r /:*)",
+      "Bash(chmod 777:*)",
+      "Bash(> /dev:*)"
+    ]
   },
   "hooks": {
     "SessionStart": [
