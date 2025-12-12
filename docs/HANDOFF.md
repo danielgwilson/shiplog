@@ -3,67 +3,66 @@
 > Capture current session state so the next session can pick up seamlessly.
 
 **Last Updated:** 2025-12-12
-**Status:** Autopilot v3 Complete - Ready for v1.6.0!
+**Status:** Command Consolidation Complete
 
 ---
 
 ## What Was Done This Session
 
-### Autopilot v3: SDK Deep Integration (6 features)
+### Command Consolidation
 
-1. **Built-in agents** - Added general-purpose, Explore, Plan agents via SDK `agents` option
-2. **Real-time streaming** - Text streams as it's generated (not just completed blocks)
-3. **TodoWrite display** - Shows formatted todo list with progress indicators
-4. **Structured outputs** - Review phase uses JSON schema, no fragile regex parsing
-5. **Console improvements** - Animated spinner, tool details, periodic token stats
-6. **Custom MCP tools** - check_sprint, get_memory, update_progress tools
+Consolidated all commands into a unified `/ship` with automatic mode detection:
+
+1. **Design Mode** - Triggers on UI/UX keywords, uses frontend-design skill, skips sprint ceremony
+2. **Continue Mode** - Active sprint with incomplete features
+3. **Planning Mode** - Creates sprint then starts working immediately (fixed autopilot gap)
+4. **Quick Task Mode** - Bug fixes without sprint overhead
+
+### Files Changed
+
+```
+.claude/commands/ship.md        # Updated with 4-mode auto-detection
+.claude/commands/status.md      # Updated to reference /ship only
+.claude/commands/plan.md        # DELETED (obsolete)
+.claude/commands/ramp.md        # DELETED (obsolete)
+.claude/commands/ship-design.md # DELETED (obsolete)
+src/commands/init.ts            # Updated to only create ship.md + status.md
+src/commands/upgrade.ts         # Now removes obsolete commands
+src/commands/doctor.ts          # Simplified version detection
+src/__tests__/e2e.test.ts       # Updated tests for new command structure
+```
+
+### Key Changes
+
+- `/ship` now auto-detects mode from user message content
+- Design work detected by keywords: UI, UX, design, visual, layout, styles, CSS, etc.
+- Planning mode explicitly says "START WORKING IMMEDIATELY" after creating sprint
+- `shiplog upgrade` removes obsolete command files during upgrade
 
 ---
 
 ## Current State
 
-- **Version:** 1.5.1 (need to bump for v1.6.0)
-- **Git:** Changes staged, ready to commit
-- **Tests:** 42 tests pass
-- **Sprint:** `2025-12-12-autopilot-v3-sdk-integration.json` complete
+- **Git:** Clean, changes committed to main
+- **Tests:** 43 tests passing
+- **Build:** Passing
+- **Version:** Ready for v1.7.0 release
 
 ---
 
-## Key Changes in v1.6.0
+## What's Next
 
-### Autopilot Now Works Like Claude Code
-- Uses subagents for exploration and parallel work (Task tool now functional)
-- Real-time text streaming instead of block-by-block output
-- Animated progress spinner for long-running tools
-- TodoWrite changes displayed as formatted list
-
-### Review Phase Uses Structured Output
-- No more fragile JSON regex parsing
-- SDK's `outputFormat` option with JSON schema
-- Reliable extraction from `msg.structured_output`
-
-### Custom Shiplog MCP Tools
-```
-mcp__shiplog__check_sprint  - Get current sprint status
-mcp__shiplog__get_memory    - Access sprint memory
-mcp__shiplog__update_progress - Update PROGRESS.md
-```
+1. **Publish v1.7.0** - Command consolidation release
+2. **Test the workflow** - Try `/ship` on a real project with design work
+3. **Promote / share** - Tweet, post, get feedback
 
 ---
 
-## Key Architecture Changes
+## Open Questions for Human
 
-### BUILTIN_AGENTS
-```typescript
-const BUILTIN_AGENTS = {
-  "general-purpose": { model: "sonnet", ... },
-  "Explore": { model: "haiku", tools: ["Read", "Glob", "Grep", "Bash"] },
-  "Plan": { model: "sonnet", tools: ["Read", "Glob", "Grep", "Bash"] },
-}
-```
-
-### Shiplog MCP Server
-Uses `createSdkMcpServer` to provide sprint-aware tools to Claude.
+1. **Ready to publish v1.7.0?** - All tests pass, command consolidation complete
+2. **Test the design mode** - Does auto-detection feel natural for design work?
+3. **Try the new planning flow** - Does it feel better to start working immediately?
 
 ---
 

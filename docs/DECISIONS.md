@@ -4,6 +4,36 @@
 
 ---
 
+## 2025-12-12: Consolidate Commands into Unified /ship
+
+**Decision:** Remove /plan, /ramp, /ship-design commands and consolidate everything into /ship with automatic mode detection.
+
+**Problem Statement:**
+1. Too many commands (/plan, /ramp, /ship, /ship-design, /status) confused users
+2. Design work felt awkward with a separate `/ship-design` command
+3. After planning mode created a sprint, Claude would stop and tell users to run `shiplog autopilot` separately - bad UX
+
+**Solution:**
+/ship now auto-detects the appropriate mode:
+- **Design Mode**: Triggers on UI/UX/visual keywords, invokes frontend-design skill, skips sprint ceremony
+- **Continue Mode**: Active sprint with incomplete features
+- **Planning Mode**: Creates sprint then **STARTS WORKING IMMEDIATELY** (fixes the autopilot gap)
+- **Quick Task Mode**: Bug fixes and small changes without sprint overhead
+
+**Alternatives Considered:**
+1. **Keep separate commands** — Rejected: too many to remember, confusing
+2. **Explicit mode flags** (e.g., `/ship --design`) — Rejected: adds friction
+3. **Ask user which mode** — Rejected: slows down workflow
+
+**Key Implementation Details:**
+- Design mode detected by keywords: UI, UX, design, visual, layout, styles, CSS, responsive, colors, typography, animation
+- After planning, command explicitly says "START WORKING IMMEDIATELY" and "Do NOT tell the user to run autopilot separately"
+- `shiplog upgrade` now removes obsolete command files
+
+**Owner:** Claude
+
+---
+
 ## 2025-12-11: Autopilot Mode (Inspired by ACE Framework)
 
 **Decision:** Implement an outer orchestration loop that enables truly autonomous agent sessions.

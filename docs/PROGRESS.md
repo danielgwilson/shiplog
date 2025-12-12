@@ -33,6 +33,7 @@
 | **Reset command** | 2025-12-11 | `shiplog reset` to restart sprints fresh |
 | **Settings.json refactor** | 2025-12-11 | Use project-level settings.json (shared) instead of settings.local.json |
 | **Autopilot v3: SDK Deep Integration** | 2025-12-12 | Built-in agents, real-time streaming, TodoWrite display, structured outputs, custom MCP tools |
+| **Command Consolidation** | 2025-12-12 | Unified /ship with auto mode detection (design, continue, planning, quick task) |
 
 ---
 
@@ -72,4 +73,5 @@
 - v1.3.0: Agent SDK upgrade - native SDK instead of CLI spawning, cost tracking
 - v1.5.0: Captain-Crew loop - quality-gated iterations with memory, loop detection, independent review, SKILLBOOK learning
 - v1.6.0: Autopilot v3 - SDK deep integration with subagents, real-time streaming, structured outputs, custom MCP tools
+- v1.7.0 (pending): Command consolidation - unified /ship with auto mode detection, removed obsolete commands
 - Repo is now PUBLIC
