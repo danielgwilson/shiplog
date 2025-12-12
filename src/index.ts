@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import { initCommand } from "./commands/init.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { autopilotCommand } from "./commands/autopilot.js";
+
+// Read version from package.json
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8"));
 
 const program = new Command();
 
@@ -18,7 +26,7 @@ program
       "Also: /ship design (creative work), /status (health check)\n\n" +
       "Learn more: https://github.com/danielgwilson/shiplog"
   )
-  .version("1.2.1");
+  .version(packageJson.version);
 
 program.addCommand(initCommand);
 program.addCommand(upgradeCommand);
