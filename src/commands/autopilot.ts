@@ -401,6 +401,8 @@ async function runClaudeSession(
     cwd,
     maxBudgetUsd: options.maxBudget,
     permissionMode: "acceptEdits", // Auto-approve edits in autopilot mode
+    // Load user, project, and local settings to inherit MCP servers and other config
+    settingSources: ["user", "project", "local"],
     systemPrompt: {
       type: "preset",
       preset: "claude_code",

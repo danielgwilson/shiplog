@@ -1,0 +1,70 @@
+{
+  "initiative": "Stripe Provider Payments - Research & Recommendation",
+  "created": "2025-12-11",
+  "status": "in_progress",
+  "context": {
+    "type": "RESEARCH",
+    "scope": "Research and documentation ONLY. No code changes.",
+    "output_file": "docs/research/stripe-provider-payments.md",
+    "input_files": [
+      "docs/STRIPE_CONVO_TRANSCRIPT-2025-12-11.md"
+    ],
+    "problem": "Need to pay contractors via credit card (for float), but Stripe blocks credit card funding of connected accounts. Current manual process is error-prone and doesn't scale.",
+    "constraints": [
+      "Do NOT modify any source code",
+      "Do NOT implement anything",
+      "Do NOT create PRs or branches",
+      "Focus entirely on research, analysis, and documentation",
+      "All output goes into the output_file markdown document"
+    ],
+    "key_questions": [
+      "Can we use credit cards to pay contractors through Stripe?",
+      "What are all the legitimate approaches (Connect, Invoicing, intermediaries)?",
+      "What are the compliance/fraud concerns Stripe has?",
+      "What's the optimal solution given our constraints?",
+      "What's the step-by-step implementation path?"
+    ]
+  },
+  "features": [
+    {
+      "id": "research-001",
+      "description": "Understand and document current payment flow",
+      "deliverable": "## Current State section: How Joseph pays providers today, the manual steps, pain points, error risks",
+      "sources": ["Codebase", "Transcript"],
+      "passes": false
+    },
+    {
+      "id": "research-002",
+      "description": "Research Stripe's policies on credit card funding",
+      "deliverable": "## Stripe Policy Analysis section: Why credit cards can't fund connected accounts, what Stripe is preventing, compliance context",
+      "sources": ["Stripe docs", "Web search"],
+      "passes": false
+    },
+    {
+      "id": "research-003",
+      "description": "Analyze all viable approaches",
+      "deliverable": "## Options Analysis section with subsections for each approach: (A) Current Connect flow, (B) Provider-created invoices, (C) Mercury/Zelle intermediary, (D) Any other discovered options. Each with pros, cons, complexity, timeline.",
+      "sources": ["Stripe docs", "Mercury docs", "Web search"],
+      "passes": false
+    },
+    {
+      "id": "research-004",
+      "description": "Evaluate automation potential for each approach",
+      "deliverable": "## Automation Analysis section: What can be automated via APIs? What requires manual steps? Engineering effort estimates.",
+      "sources": ["Stripe API docs", "Mercury API docs", "Codebase"],
+      "passes": false
+    },
+    {
+      "id": "research-005",
+      "description": "Document recommended approach with implementation roadmap",
+      "deliverable": "## Recommendation section: Clear winner, why it wins, detailed step-by-step implementation plan, timeline, risks, rollback plan",
+      "passes": false
+    },
+    {
+      "id": "research-006",
+      "description": "Write executive summary",
+      "deliverable": "## Executive Summary at TOP of document: 2-3 paragraphs (60-second read), the problem, the solution, the ask",
+      "passes": false
+    }
+  ]
+}
