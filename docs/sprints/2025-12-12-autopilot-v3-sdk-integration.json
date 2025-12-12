@@ -39,7 +39,8 @@
         "Stream text to console as it arrives (not just complete blocks)",
         "Test that output streams smoothly like Claude Code"
       ],
-      "passes": false
+      "passes": true,
+      "notes": "Added includePartialMessages and stream_event handling. Text now streams in real-time."
     },
     {
       "id": "v3-003",

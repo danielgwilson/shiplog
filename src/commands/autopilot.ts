@@ -688,6 +688,36 @@ function formatToolUse(toolName: string, toolInput: any): string {
   return `🔧 ${toolName}${details}`;
 }
 
+/**
+ * Format TodoWrite updates for display in console
+ * Shows a compact, visually clear todo list with status icons
+ */
+function formatTodoList(todos: Array<{ content: string; status: string; activeForm?: string }>): string {
+  if (!todos || todos.length === 0) return "";
+
+  const lines: string[] = [];
+  lines.push("\n┌─ 📋 Todo List ─────────────────────────────────");
+
+  for (const todo of todos) {
+    const icon = todo.status === "completed" ? "✅" :
+                 todo.status === "in_progress" ? "🔧" : "⬜";
+    // Show activeForm for in_progress, otherwise content
+    const text = todo.status === "in_progress" && todo.activeForm
+      ? todo.activeForm
+      : todo.content;
+    // Truncate long content
+    const displayText = text.length > 50 ? text.slice(0, 47) + "..." : text;
+    lines.push(`│ ${icon} ${displayText}`);
+  }
+
+  // Summary line
+  const completed = todos.filter(t => t.status === "completed").length;
+  const inProgress = todos.filter(t => t.status === "in_progress").length;
+  lines.push(`└─ Progress: ${completed}/${todos.length} done, ${inProgress} in progress`);
+
+  return lines.join("\n");
+}
+
 function generateContinuationPrompt(
   cwd: string,
   iteration: number,
@@ -1116,7 +1146,12 @@ async function runClaudeSession(
         const content = msg.message.content;
         for (const block of content) {
           if (block.type === "tool_use") {
-            console.log(`\n${formatToolUse(block.name, block.input)}`);
+            // Special handling for TodoWrite - show formatted todo list
+            if (block.name === "TodoWrite" && block.input?.todos) {
+              console.log(formatTodoList(block.input.todos));
+            } else {
+              console.log(`\n${formatToolUse(block.name, block.input)}`);
+            }
           }
         }
       }
