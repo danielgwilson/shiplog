@@ -4,11 +4,13 @@
 
 ## Commands
 
+**IMPORTANT: Use pnpm, not npm!**
+
 ```bash
-# Add your project's common commands here
-npm install       # Install dependencies
-npm run dev       # Start development server
-npm test          # Run tests
+pnpm install      # Install dependencies
+pnpm run dev      # Start development server
+pnpm test         # Run tests
+pnpm run build    # Build the project
 ```
 
 ## Architecture
