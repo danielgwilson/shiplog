@@ -1212,7 +1212,7 @@ if ! STATE=$(cat "$ACTIVATION_FILE" 2>/dev/null); then
   exit 0
 fi
 
-# Parse state (with defaults if jq unavailable or fields missing)
+# Parse activation state (with defaults if jq unavailable or fields missing)
 if command -v jq &> /dev/null; then
   ITERATION=$(echo "$STATE" | jq -r '.iteration // 0')
   MAX_ITER=$(echo "$STATE" | jq -r '.maxIterations // 20')
@@ -1222,11 +1222,27 @@ else
   MAX_ITER=$(echo "$STATE" | grep -o '"maxIterations":[0-9]*' | grep -o '[0-9]*' || echo "20")
 fi
 
-# Read stdin (Claude's output before stopping)
-INPUT=$(cat)
+# Read stdin - this is JSON metadata with transcript_path, NOT Claude's output
+HOOK_INPUT=$(cat)
 
-# Check for escape phrases
-if echo "$INPUT" | grep -qE "SHIPLOG_DONE|SHIPLOG_NEED_USER"; then
+# Extract transcript_path from hook input
+if command -v jq &> /dev/null; then
+  TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path // ""')
+else
+  # Fallback: grep for transcript_path
+  TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4 || echo "")
+fi
+
+# Check for escape phrases in the transcript (Claude's actual output)
+FOUND_ESCAPE=false
+if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+  # Read last 50 lines of transcript and check for escape phrases
+  if tail -50 "$TRANSCRIPT_PATH" 2>/dev/null | grep -qE "SHIPLOG_DONE|SHIPLOG_NEED_USER"; then
+    FOUND_ESCAPE=true
+  fi
+fi
+
+if [ "$FOUND_ESCAPE" = true ]; then
   # Escape phrase detected - allow stop
   exit 0
 fi

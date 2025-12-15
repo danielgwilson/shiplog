@@ -1660,10 +1660,9 @@ async function runHooksMode(cwd: string, maxIterations: number): Promise<void> {
 
   console.log(`\n✅ Autonomy hooks detected`);
   console.log(`🔄 Max iterations: ${maxIterations}`);
-  console.log(`\n📝 To stop autonomy:`);
-  console.log(`   • Say SHIPLOG_DONE when the task is complete`);
-  console.log(`   • Say SHIPLOG_NEED_USER if you need human input`);
-  console.log(`   • Press Ctrl+C to force stop\n`);
+  console.log(`\n🤖 How it works:`);
+  console.log(`   Claude keeps working until it says SHIPLOG_DONE or SHIPLOG_NEED_USER`);
+  console.log(`   You can Ctrl+C anytime to force stop\n`);
 
   // Ensure .shiplog directory exists
   const shiplogDir = path.join(cwd, ".shiplog");

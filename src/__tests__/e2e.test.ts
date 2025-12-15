@@ -246,6 +246,53 @@ describe('shiplog upgrade', () => {
     expect(shipMd).not.toBe('old ship content');
     expect(shipMd).toContain('You are working on');
   });
+
+  it('adds only autonomy hooks when v2 exists but hooks are missing', () => {
+    // Create v2 structure (has ship.md) but WITHOUT autonomy hooks
+    fs.mkdirSync(path.join(tempDir, '.claude/commands'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, '.claude/hooks'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, 'CLAUDE.md'), '# test-project');
+    fs.writeFileSync(path.join(tempDir, '.claude/commands/ship.md'), 'existing ship content');
+    fs.writeFileSync(path.join(tempDir, '.claude/commands/status.md'), 'existing status content');
+    fs.writeFileSync(path.join(tempDir, '.claude/hooks/session-start.sh'), '#!/bin/bash\necho "existing"');
+    fs.writeFileSync(path.join(tempDir, '.claude/settings.json'), JSON.stringify({
+      permissions: { allow: [], deny: [] },
+      hooks: {
+        SessionStart: [{ matcher: '', hooks: [{ type: 'command', command: 'bash test.sh' }] }],
+        SessionEnd: [{ matcher: '', hooks: [{ type: 'command', command: 'bash test.sh' }] }]
+      }
+    }, null, 2));
+
+    const output = runShiplog('upgrade', tempDir);
+
+    // Should indicate hooks-only upgrade
+    expect(output).toContain('Adding autonomy hooks');
+
+    // Autonomy hooks should be added
+    expect(fs.existsSync(path.join(tempDir, '.claude/hooks/autonomy/stop-hook.sh'))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, '.claude/hooks/autonomy/session-start-autonomy.sh'))).toBe(true);
+
+    // Existing commands should NOT be touched
+    const shipMd = fs.readFileSync(path.join(tempDir, '.claude/commands/ship.md'), 'utf-8');
+    expect(shipMd).toBe('existing ship content');
+    const statusMd = fs.readFileSync(path.join(tempDir, '.claude/commands/status.md'), 'utf-8');
+    expect(statusMd).toBe('existing status content');
+
+    // Existing hooks should NOT be touched
+    const sessionStart = fs.readFileSync(path.join(tempDir, '.claude/hooks/session-start.sh'), 'utf-8');
+    expect(sessionStart).toContain('existing');
+
+    // No backup should be created
+    const backupDirs = fs.readdirSync(path.join(tempDir, '.claude'))
+      .filter(f => f.startsWith('commands.backup-'));
+    expect(backupDirs.length).toBe(0);
+
+    // Settings should have Stop hook added
+    const settings = readJson(path.join(tempDir, '.claude/settings.json'));
+    expect(settings.hooks.Stop).toBeDefined();
+    expect(settings.hooks.Stop[0].hooks[0].command).toContain('stop-hook.sh');
+  });
 });
 
 describe('settings.json format', () => {
