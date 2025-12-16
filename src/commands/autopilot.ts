@@ -252,6 +252,111 @@ function createShiplogMcpServer(cwd: string) {
           };
         }
       ),
+
+      // Tool: update_sprint - Mark features as complete or update sprint status
+      tool(
+        "update_sprint",
+        "Update the current sprint file to mark features as complete (passes: true) or update the sprint status. Use this when you've finished implementing and testing a feature.",
+        {
+          featureId: z.string().optional().describe("The feature ID to update (e.g., 'feat-001')"),
+          featureDescription: z.string().optional().describe("Alternative: match feature by description text"),
+          passes: z.boolean().optional().describe("Set to true when the feature is complete and tested"),
+          notes: z.string().optional().describe("Add notes to the feature (e.g., implementation details)"),
+          sprintStatus: z.enum(["in_progress", "completed", "blocked"]).optional().describe("Update the overall sprint status"),
+        },
+        async (args) => {
+          const sprintFilePath = getCurrentSprintFile(cwd);
+          if (!sprintFilePath) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "No active sprint found" }) }],
+            };
+          }
+
+          const fullPath = path.join(cwd, sprintFilePath);
+          let sprint: Sprint;
+
+          try {
+            sprint = JSON.parse(fs.readFileSync(fullPath, "utf-8")) as Sprint;
+          } catch (err) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "Failed to read sprint file", details: (err as Error).message }) }],
+            };
+          }
+
+          const updates: string[] = [];
+
+          // Update sprint status if provided
+          if (args.sprintStatus) {
+            sprint.status = args.sprintStatus;
+            updates.push(`Sprint status → ${args.sprintStatus}`);
+          }
+
+          // Find and update feature if featureId or featureDescription provided
+          if (args.featureId || args.featureDescription) {
+            const feature = sprint.features?.find(f =>
+              (args.featureId && f.id === args.featureId) ||
+              (args.featureDescription && f.description.toLowerCase().includes(args.featureDescription.toLowerCase()))
+            );
+
+            if (!feature) {
+              return {
+                content: [{ type: "text", text: JSON.stringify({
+                  error: "Feature not found",
+                  searchedFor: args.featureId || args.featureDescription,
+                  availableFeatures: sprint.features?.map(f => ({ id: f.id, description: f.description }))
+                }) }],
+              };
+            }
+
+            // Update passes status
+            if (args.passes !== undefined) {
+              const previousPasses = feature.passes;
+              feature.passes = args.passes;
+              updates.push(`Feature "${feature.id}" passes: ${previousPasses} → ${args.passes}`);
+            }
+
+            // Add notes if provided (append to existing notes or create new)
+            if (args.notes) {
+              const existingNotes = (feature as any).notes || "";
+              (feature as any).notes = existingNotes
+                ? `${existingNotes}\n${new Date().toISOString().slice(0, 10)}: ${args.notes}`
+                : `${new Date().toISOString().slice(0, 10)}: ${args.notes}`;
+              updates.push(`Added notes to "${feature.id}"`);
+            }
+          }
+
+          if (updates.length === 0) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "No updates specified. Provide featureId/featureDescription with passes, notes, or sprintStatus." }) }],
+            };
+          }
+
+          // Check if all features pass - auto-complete sprint
+          const allPass = sprint.features?.every(f => f.passes) ?? false;
+          if (allPass && sprint.status === "in_progress") {
+            sprint.status = "completed";
+            updates.push("🎉 All features complete - sprint status → completed");
+          }
+
+          // Write updated sprint file
+          try {
+            fs.writeFileSync(fullPath, JSON.stringify(sprint, null, 2) + "\n");
+          } catch (err) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "Failed to write sprint file", details: (err as Error).message }) }],
+            };
+          }
+
+          return {
+            content: [{ type: "text", text: JSON.stringify({
+              success: true,
+              updates,
+              sprintFile: sprintFilePath,
+              remainingFeatures: sprint.features?.filter(f => !f.passes).map(f => f.description) || []
+            }, null, 2) }],
+          };
+        }
+      ),
     ],
   });
 }
@@ -1319,7 +1424,7 @@ async function runClaudeSession(
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: `\n\n# Autopilot Mode\nYou are running in autopilot mode. Work autonomously until the task is complete.\nMake commits frequently. Use /ship to check progress.\n\n# Available Subagents\nYou have access to these subagents via the Task tool:\n- general-purpose: For complex multi-step tasks and research\n- Explore: Fast codebase exploration (uses Haiku for speed)\n- Plan: Implementation planning and architecture design\n\nUse subagents liberally for exploration and parallel work to be more efficient.\n\n# Shiplog Tools\nYou have access to shiplog-specific MCP tools:\n- mcp__shiplog__check_sprint: Get current sprint status and features\n- mcp__shiplog__get_memory: Access sprint memory (what's been tried, failures to avoid)\n- mcp__shiplog__update_progress: Update PROGRESS.md with current status\n\nUse these tools to stay aware of sprint state and track progress.`,
+      append: `\n\n# Autopilot Mode\nYou are running in autopilot mode. Work autonomously until the task is complete.\nMake commits frequently. Use /ship to check progress.\n\n# Available Subagents\nYou have access to these subagents via the Task tool:\n- general-purpose: For complex multi-step tasks and research\n- Explore: Fast codebase exploration (uses Haiku for speed)\n- Plan: Implementation planning and architecture design\n\nUse subagents liberally for exploration and parallel work to be more efficient.\n\n# Shiplog Tools\nYou have access to shiplog-specific MCP tools:\n- mcp__shiplog__check_sprint: Get current sprint status and features\n- mcp__shiplog__get_memory: Access sprint memory (what's been tried, failures to avoid)\n- mcp__shiplog__update_progress: Update PROGRESS.md with current status\n- mcp__shiplog__update_sprint: Mark features as complete (passes: true) or update sprint status\n\nUse these tools to stay aware of sprint state and track progress.\n\nIMPORTANT: When you complete a feature, use mcp__shiplog__update_sprint to mark it as passes: true. This is better than editing the JSON file directly.`,
     },
     abortController,
     // Built-in agents for Task tool - enables background tasks like Claude Code

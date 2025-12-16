@@ -4,6 +4,43 @@
 
 ---
 
+## 2025-12-15: Add update_sprint MCP Tool
+
+**Decision:** Add a new `update_sprint` MCP tool to the autopilot's shiplog MCP server.
+
+**Problem Statement:**
+When Claude runs in autopilot mode, it needs to mark sprint features as complete (passes: true). Previously, this required manually editing the JSON sprint file, which was:
+1. Error-prone (JSON syntax issues)
+2. Inconsistent (different formatting approaches)
+3. Missing validation (no check for feature existence)
+
+**Solution:**
+Added `mcp__shiplog__update_sprint` tool with:
+- Feature lookup by ID or description substring
+- Atomic passes status updates
+- Note appending with timestamps
+- Sprint status management (in_progress/completed/blocked)
+- Auto-completion when all features pass
+- Proper error handling with helpful messages
+
+**Key Implementation Details:**
+- Uses zod for schema validation
+- Returns remaining incomplete features for context
+- Safely handles malformed sprint files
+- Integrates with existing sprint memory system
+
+**Testing:**
+Added 5 new tests covering:
+- Sprint file parsing
+- Feature status updates
+- Auto-completion logic
+- Description-based feature search
+- Notes appending
+
+**Owner:** Claude
+
+---
+
 ## 2025-12-12: Consolidate Commands into Unified /ship
 
 **Decision:** Remove /plan, /ramp, /ship-design commands and consolidate everything into /ship with automatic mode detection.

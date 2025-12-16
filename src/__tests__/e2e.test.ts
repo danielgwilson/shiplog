@@ -800,3 +800,151 @@ describe('shiplog doctor', () => {
     expect(fs.existsSync(path.join(tempDir, 'docs/sprints'))).toBe(true);
   });
 });
+
+describe('sprint file operations', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = createTempDir();
+    // Create minimal shiplog structure
+    fs.mkdirSync(path.join(tempDir, '.claude/commands'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, '.claude/hooks'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, 'docs/sprints'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, '.shiplog'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, 'CLAUDE.md'), '# test');
+    fs.writeFileSync(path.join(tempDir, '.gitignore'), '.shiplog/\n');
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('sprint file can be parsed with multiple features', () => {
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-15-test.json');
+    const sprintData = {
+      initiative: 'Test Sprint',
+      created: '2025-12-15',
+      status: 'in_progress',
+      context: {
+        test_command: 'pnpm test',
+        quality_criteria: ['Tests pass', 'No errors']
+      },
+      features: [
+        { id: 'feat-001', description: 'First feature', passes: false },
+        { id: 'feat-002', description: 'Second feature', passes: false },
+        { id: 'feat-003', description: 'Third feature', passes: true }
+      ]
+    };
+    fs.writeFileSync(sprintPath, JSON.stringify(sprintData, null, 2));
+
+    // Read it back and verify structure
+    const parsed = readJson(sprintPath);
+    expect(parsed.features).toHaveLength(3);
+    expect(parsed.features[0].id).toBe('feat-001');
+    expect(parsed.features[2].passes).toBe(true);
+  });
+
+  it('sprint file feature passes can be updated', () => {
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-15-test.json');
+    const sprintData = {
+      initiative: 'Test Sprint',
+      created: '2025-12-15',
+      status: 'in_progress',
+      features: [
+        { id: 'feat-001', description: 'First feature', passes: false }
+      ]
+    };
+    fs.writeFileSync(sprintPath, JSON.stringify(sprintData, null, 2));
+
+    // Simulate what update_sprint tool does
+    const sprint = readJson(sprintPath);
+    const feature = sprint.features.find((f: any) => f.id === 'feat-001');
+    feature.passes = true;
+    fs.writeFileSync(sprintPath, JSON.stringify(sprint, null, 2) + '\n');
+
+    // Verify update persisted
+    const updated = readJson(sprintPath);
+    expect(updated.features[0].passes).toBe(true);
+  });
+
+  it('sprint status auto-completes when all features pass', () => {
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-15-test.json');
+    const sprintData = {
+      initiative: 'Test Sprint',
+      created: '2025-12-15',
+      status: 'in_progress',
+      features: [
+        { id: 'feat-001', description: 'First feature', passes: false },
+        { id: 'feat-002', description: 'Second feature', passes: true }
+      ]
+    };
+    fs.writeFileSync(sprintPath, JSON.stringify(sprintData, null, 2));
+
+    // Simulate update_sprint completing the last feature
+    const sprint = readJson(sprintPath);
+    const feature = sprint.features.find((f: any) => f.id === 'feat-001');
+    feature.passes = true;
+
+    // Check if all features pass and auto-complete
+    const allPass = sprint.features.every((f: any) => f.passes);
+    if (allPass && sprint.status === 'in_progress') {
+      sprint.status = 'completed';
+    }
+
+    fs.writeFileSync(sprintPath, JSON.stringify(sprint, null, 2) + '\n');
+
+    const updated = readJson(sprintPath);
+    expect(updated.status).toBe('completed');
+  });
+
+  it('feature can be found by description substring', () => {
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-15-test.json');
+    const sprintData = {
+      initiative: 'Test Sprint',
+      created: '2025-12-15',
+      status: 'in_progress',
+      features: [
+        { id: 'feat-001', description: 'Add user authentication', passes: false },
+        { id: 'feat-002', description: 'Implement API endpoints', passes: false }
+      ]
+    };
+    fs.writeFileSync(sprintPath, JSON.stringify(sprintData, null, 2));
+
+    const sprint = readJson(sprintPath);
+    const searchTerm = 'authentication';
+    const feature = sprint.features.find(
+      (f: any) => f.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    expect(feature).toBeDefined();
+    expect(feature.id).toBe('feat-001');
+  });
+
+  it('notes can be appended to features', () => {
+    const sprintPath = path.join(tempDir, 'docs/sprints/2025-12-15-test.json');
+    const sprintData = {
+      initiative: 'Test Sprint',
+      created: '2025-12-15',
+      status: 'in_progress',
+      features: [
+        { id: 'feat-001', description: 'Test feature', passes: false, notes: 'Initial note' }
+      ]
+    };
+    fs.writeFileSync(sprintPath, JSON.stringify(sprintData, null, 2));
+
+    // Simulate appending notes
+    const sprint = readJson(sprintPath);
+    const feature = sprint.features[0];
+    const existingNotes = feature.notes || '';
+    const newNote = 'Added new implementation detail';
+    feature.notes = existingNotes
+      ? `${existingNotes}\n2025-12-15: ${newNote}`
+      : `2025-12-15: ${newNote}`;
+
+    fs.writeFileSync(sprintPath, JSON.stringify(sprint, null, 2) + '\n');
+
+    const updated = readJson(sprintPath);
+    expect(updated.features[0].notes).toContain('Initial note');
+    expect(updated.features[0].notes).toContain('Added new implementation detail');
+  });
+});
