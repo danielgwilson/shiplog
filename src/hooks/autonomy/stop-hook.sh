@@ -39,11 +39,23 @@ else
   TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4 || echo "")
 fi
 
-# Check for escape phrases in the transcript (Claude's actual output)
+# Check for escape phrases in Claude's ASSISTANT messages only (not tool results/file contents)
+# This prevents false positives when Claude reads files containing the escape phrase
 FOUND_ESCAPE=false
-if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-  # Read last 50 lines of transcript and check for escape phrases
-  if tail -50 "$TRANSCRIPT_PATH" 2>/dev/null | grep -qE "SHIPLOG_DONE|SHIPLOG_NEED_USER"; then
+if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ] && command -v jq &> /dev/null; then
+  # Use jq to extract only assistant text content from last 10 transcript entries
+  # Filter: type=="assistant" -> .message.content[] -> select type=="text" -> .text
+  ASSISTANT_TEXT=$(tail -10 "$TRANSCRIPT_PATH" 2>/dev/null | \
+    jq -r 'select(.type == "assistant") | .message.content[]? | select(.type == "text") | .text' 2>/dev/null)
+
+  if echo "$ASSISTANT_TEXT" | grep -qE "SHIPLOG_DONE|SHIPLOG_NEED_USER"; then
+    FOUND_ESCAPE=true
+  fi
+elif [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+  # Fallback without jq: look for escape phrase as standalone (more conservative)
+  # Only match if it appears to be Claude saying it (not in a code block or file content)
+  # This is imperfect but better than matching everything
+  if tail -20 "$TRANSCRIPT_PATH" 2>/dev/null | grep -E '"text":\s*"[^"]*SHIPLOG_(DONE|NEED_USER)' | grep -qv 'function_calls\|<result>'; then
     FOUND_ESCAPE=true
   fi
 fi
