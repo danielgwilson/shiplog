@@ -548,6 +548,30 @@ interface Sprint {
   };
 }
 
+/**
+ * Get feature progress stats from a sprint
+ */
+function getFeatureProgress(sprint: Sprint | null): { completed: number; total: number; percent: number } {
+  if (!sprint?.features || sprint.features.length === 0) {
+    return { completed: 0, total: 0, percent: 0 };
+  }
+  const total = sprint.features.length;
+  const completed = sprint.features.filter(f => f.passes).length;
+  const percent = Math.round((completed / total) * 100);
+  return { completed, total, percent };
+}
+
+/**
+ * Format feature progress as a visual bar
+ */
+function formatProgressBar(completed: number, total: number, width: number = 20): string {
+  if (total === 0) return "";
+  const filled = Math.round((completed / total) * width);
+  const empty = width - filled;
+  const bar = "█".repeat(filled) + "░".repeat(empty);
+  return `[${bar}] ${completed}/${total}`;
+}
+
 function getCurrentSprintTask(cwd: string): { initiative: string; task: string } | null {
   const sprintsDir = path.join(cwd, "docs/sprints");
   if (!fs.existsSync(sprintsDir)) return null;
@@ -2005,6 +2029,14 @@ HOOKS MODE PREREQUISITES
 
     console.log(`\n📋 Initiative: ${sprintTask.initiative}`);
     console.log(`📌 Current task: ${sprintTask.task}`);
+
+    // Show feature progress in header
+    const initialSprint = getCurrentSprint(cwd);
+    const initialProgress = getFeatureProgress(initialSprint);
+    if (initialProgress.total > 0) {
+      console.log(`📊 Progress: ${formatProgressBar(initialProgress.completed, initialProgress.total)} (${initialProgress.percent}%)`);
+    }
+
     console.log(`🤖 Model: ${model} (${getModelId(model)})`);
     console.log(`🔄 Max iterations: ${maxIterations}`);
     console.log(`⏸️  Stall threshold: ${stallThreshold} iterations`);
@@ -2259,6 +2291,13 @@ HOOKS MODE PREREQUISITES
         console.log(`   Tokens: ${inputTokens.toLocaleString()} in / ${outputTokens.toLocaleString()} out`);
       }
       console.log(`   Total commits: ${state.totalCommits}`);
+
+      // Show feature progress
+      const currentSprintForProgress = getCurrentSprint(cwd);
+      const progress = getFeatureProgress(currentSprintForProgress);
+      if (progress.total > 0) {
+        console.log(`   Features: ${formatProgressBar(progress.completed, progress.total)} (${progress.percent}%)`);
+      }
 
       // Extract learnings
       const recentCommits = getRecentCommitMessages(cwd, commitsMade || 5);
