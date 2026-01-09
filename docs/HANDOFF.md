@@ -2,64 +2,74 @@
 
 > Capture current session state so the next session can pick up seamlessly.
 
-**Last Updated:** 2025-12-15
-**Status:** v1.8.0 Ready
+**Last Updated:** 2026-01-08
+**Status:** v1.9.0 Ready
 
 ---
 
 ## What Was Done This Session
 
-### MCP Tools Enhancement (v1.8.0)
+### Discoverability & UX Sprint (v1.9.0)
 
-Added new MCP tool and fixed hook configuration:
+Focused on making shiplog easier to find and nicer to use:
 
-1. **update_sprint MCP Tool** - Allows autopilot Claude to mark features complete without manually editing JSON
-   - Feature lookup by ID or description substring
-   - Atomic passes status updates
-   - Note appending with timestamps
-   - Auto-completion when all features pass
+1. **npm Keywords Expansion** - Went from 6 to 20 keywords covering:
+   - Brand terms: claude-code, anthropic
+   - Trending: agentic-coding, vibe-coding
+   - Features: autopilot, long-running-agents
+   - Categories: developer-tools, cli, productivity
 
-2. **Stop Hook Fix** - Added missing `matcher: ""` field to Stop hook configuration
-   - Fixed in init.ts (getSETTINGSjson)
-   - Fixed in upgrade.ts
-   - Extended doctor.ts validation to include Stop hooks
+2. **README Examples** - Added "See It In Action" section with:
+   - Real /ship conversation flow
+   - Autopilot terminal output example
+   - Session continuity diagram
+
+3. **Visual Progress Bar** - Added to autopilot output:
+   - Shows `[████████░░░░░░░░░░░░] 2/5 (40%)` progress
+   - Displayed in header at startup
+   - Updated after each session
+
+4. **Analyze Command** - New `shiplog analyze` for:
+   - Session stats (cost, time, success rate)
+   - Pattern detection (repeated failures)
+   - Suggested CLAUDE.md rules
+   - JSON output option
 
 ### Files Changed
 
 ```
-src/commands/autopilot.ts       # Added update_sprint MCP tool (~100 lines)
-src/commands/init.ts            # Fixed Stop hook matcher
-src/commands/upgrade.ts         # Fixed Stop hook matcher
-src/commands/doctor.ts          # Extended hook validation to include Stop
-src/__tests__/e2e.test.ts       # Added 5 new tests for sprint operations
-docs/DECISIONS.md               # Documented update_sprint decision
-docs/PROGRESS.md                # Updated with v1.8.0 changes
-package.json                    # Version bump to 1.8.0
+package.json                          # Version 1.9.0, 20 keywords
+README.md                             # Added "See It In Action" section
+src/commands/autopilot.ts             # Progress bar helpers and display
+src/commands/analyze.ts               # NEW - session analysis command
+src/index.ts                          # Added analyze command
+docs/sprints/2026-01-08-shiplog-v2.json  # Sprint file (completed)
+docs/PROGRESS.md                      # Updated with v1.9.0
 ```
 
 ---
 
 ## Current State
 
-- **Git:** Clean, 4 commits on main ahead of origin
-- **Tests:** 49 tests passing (up from 44)
+- **Git:** 5 new commits on main
+- **Tests:** 49 tests passing
 - **Build:** Passing
-- **Version:** 1.8.0
+- **Version:** 1.9.0
 
 ---
 
 ## What's Next
 
-1. **Publish v1.8.0** - MCP tools enhancement release
-2. **Test update_sprint** - Verify autopilot uses the new tool correctly
-3. **Promote / share** - Tweet, post, get feedback
+1. **Publish v1.9.0** - Ready to publish to npm
+2. **Promote** - Tweet, share on Reddit/HN
+3. **Video demo** - Record terminal session for README
 
 ---
 
 ## Open Questions for Human
 
-1. **Ready to publish v1.8.0?** - All tests pass
-2. **Push to origin?** - 4 commits ready to push
+1. **Ready to publish v1.9.0?** - All tests pass
+2. **Push to origin?** - 5 new commits ready
 
 ---
 

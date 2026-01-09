@@ -35,6 +35,7 @@
 | **Autopilot v3: SDK Deep Integration** | 2025-12-12 | Built-in agents, real-time streaming, TodoWrite display, structured outputs, custom MCP tools |
 | **Command Consolidation** | 2025-12-12 | Unified /ship with auto mode detection (design, continue, planning, quick task) |
 | **MCP Tools Enhancement** | 2025-12-15 | v1.8.0 - Added update_sprint MCP tool, fixed Stop hook matcher |
+| **Discoverability & UX** | 2026-01-08 | v1.9.0 - 20 npm keywords, README examples, progress bar, analyze command |
 
 ---
 
@@ -58,7 +59,6 @@
 
 - TUI for visibility (low priority per v2 design decision)
 - Formal babysitter pattern documentation
-- More keywords/SEO for npm discoverability
 
 ---
 
@@ -76,4 +76,5 @@
 - v1.6.0: Autopilot v3 - SDK deep integration with subagents, real-time streaming, structured outputs, custom MCP tools
 - v1.7.0: Command consolidation - unified /ship with auto mode detection, removed obsolete commands
 - v1.8.0: MCP tools enhancement - added update_sprint tool for marking features complete, fixed Stop hook matcher
+- v1.9.0: Discoverability & UX - 20 npm keywords, README examples section, visual progress bar, analyze command for session insights
 - Repo is now PUBLIC

@@ -1,0 +1,98 @@
+{
+  "initiative": "Shiplog v2: Better Discoverability & UX",
+  "created": "2026-01-08",
+  "status": "completed",
+  "discoveries": {
+    "existing_patterns": "Console.log-based output, SKILLBOOK.md for learnings, sprint memory for loop detection",
+    "relevant_files": [
+      "package.json",
+      "README.md",
+      "src/commands/autopilot.ts",
+      "src/commands/init.ts"
+    ],
+    "dependencies_needed": [],
+    "integration_points": ["autopilot command output", "npm registry"],
+    "concerns": ["Keep changes minimal and focused", "Don't break existing functionality"]
+  },
+  "decisions": [
+    {
+      "decision": "Start with npm keywords before TUI - discoverability is highest impact",
+      "reason": "npm keywords cost nothing to add and immediately help people find shiplog"
+    },
+    {
+      "decision": "Add simple inline progress display rather than full TUI",
+      "reason": "Full TUI (like blessed or ink) adds dependencies and complexity - simple inline updates work well"
+    }
+  ],
+  "context": {
+    "test_command": "pnpm test",
+    "quality_criteria": ["Tests pass", "No TypeScript errors", "Version bump"]
+  },
+  "features": [
+    {
+      "id": "feat-001",
+      "description": "Expand npm keywords for discoverability",
+      "acceptance_criteria": [
+        "15+ relevant keywords in package.json",
+        "Keywords cover: agentic coding, claude code, autopilot, long-running, session management, vibe coding"
+      ],
+      "steps": [
+        "Add comprehensive keyword list to package.json",
+        "Verify with pnpm run build"
+      ],
+      "passes": true
+    },
+    {
+      "id": "feat-002",
+      "description": "Add quick-start code examples to README",
+      "acceptance_criteria": [
+        "Show concrete /ship workflow example",
+        "Show autopilot output example",
+        "Include GIF or terminal recording link placeholder"
+      ],
+      "steps": [
+        "Add 'See it in action' section with concrete workflow",
+        "Add terminal output example showing progress",
+        "Mention video demo (placeholder for future)"
+      ],
+      "passes": true
+    },
+    {
+      "id": "feat-003",
+      "description": "Add inline progress display during autopilot",
+      "acceptance_criteria": [
+        "Shows current feature being worked on",
+        "Shows elapsed time",
+        "Shows cost so far",
+        "Updates in place (not scrolling)"
+      ],
+      "steps": [
+        "Create formatProgress helper function",
+        "Add progress line that updates during session",
+        "Show feature count (e.g., 2/5 complete)",
+        "Test with dry-run mode"
+      ],
+      "passes": true
+    },
+    {
+      "id": "feat-004",
+      "description": "Add 'shiplog analyze' command for session insights",
+      "acceptance_criteria": [
+        "Reads .shiplog/ history and sprint memory",
+        "Identifies patterns (common failures, repeated approaches)",
+        "Suggests CLAUDE.md rules based on patterns",
+        "Shows cost/time stats"
+      ],
+      "steps": [
+        "Create src/commands/analyze.ts",
+        "Parse autopilot-state.json and sprint memory files",
+        "Detect patterns (repeated failures, successful approaches)",
+        "Generate suggested rules",
+        "Format and display insights",
+        "Add to CLI in index.ts",
+        "Add tests"
+      ],
+      "passes": true
+    }
+  ]
+}
