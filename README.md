@@ -58,6 +58,64 @@ That's it. Claude auto-detects whether to plan new work or continue existing wor
 
 ---
 
+## See It In Action
+
+### Starting a New Feature
+
+```
+You: /ship "Add user authentication"
+
+Claude: I'll plan the authentication feature for you.
+
+📋 Creating sprint: 2025-01-08-user-auth.json
+
+Features:
+1. ◻️ User can sign up with email/password
+2. ◻️ User can log in and receive JWT token
+3. ◻️ Protected routes check authentication
+4. ◻️ User can reset password via email
+
+Starting work on feature 1...
+```
+
+### Autopilot Running Autonomously
+
+```
+============================================================
+  🚁 Shiplog Autopilot
+============================================================
+
+📋 Initiative: Add user authentication
+📌 Current task: User can sign up with email/password
+🔄 Max iterations: 20
+⏸️  Stall threshold: 3 iterations
+
+------------------------------------------------------------
+  SESSION 1/20
+------------------------------------------------------------
+🚀 Starting Claude session...
+
+[Claude works autonomously - you can watch or walk away]
+
+📊 Session 1 Results:
+   Duration: 4m 32s
+   Commits made: 3
+   Cost: $0.0847
+   Features: 1/4 complete ✓
+
+⏳ Starting next iteration in 3 seconds...
+```
+
+### Session Continuity
+
+```
+Day 1: /ship "Add auth"     → Creates sprint, builds features 1-2
+Day 2: /ship                → Continues automatically, builds features 3-4
+Day 3: /ship                → Sprint complete! Ready for next initiative
+```
+
+---
+
 ## How It Works
 
 ### One Command: `/ship`
